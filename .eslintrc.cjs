@@ -19,6 +19,7 @@ module.exports = {
         'space-before-function-paren': 'never',
         semi: true
       }
-    ]
+    ],
+    'vue/multi-word-component-names': 'off'
   }
 };

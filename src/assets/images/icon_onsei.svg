@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 800 800" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1;">
+    <g transform="matrix(1,0,0,1,-1159,-5374)">
+        <g transform="matrix(2.02015,0,0,2.02017,868.758,4817.01)">
+            <rect x="142.327" y="275.741" width="396.011" height="396.011" style="fill:none;"/>
+            <g transform="matrix(1,0,0,1,-0.892465,2259.42)">
+                <g transform="matrix(0.879199,0,0,0.879199,9.76935,-2202.19)">
+                    <g transform="matrix(0.495014,0,0,0.453085,27.3552,-74.3199)">
+                        <path d="M481.431,1314.64L481.431,1104.62L721.431,902.634L721.431,1516.63L481.431,1314.64Z" style="fill:none;stroke:black;stroke-width:26.37px;"/>
+                    </g>
+                    <g transform="matrix(0.563028,0,0,0.56302,20.0021,-2885.09)">
+                        <rect x="297.341" y="5891.75" width="89.678" height="148" style="fill:none;stroke:black;stroke-width:22.22px;"/>
+                    </g>
+                </g>
+                <g transform="matrix(0.620809,0,0,0.6208,29.3421,-2887.26)">
+                    <path d="M641.25,1923.32C676.248,1881.61 695.431,1828.9 695.431,1774.46C695.431,1720.01 676.248,1667.31 641.25,1625.6C676.248,1667.31 695.431,1720.01 695.431,1774.46C695.431,1828.9 676.248,1881.61 641.25,1923.32Z" style="fill:none;stroke:black;stroke-width:17.72px;"/>
+                </g>
+                <g transform="matrix(0.372485,0,0,0.37248,155.198,-2446.63)">
+                    <path d="M641.25,1923.32C676.248,1881.61 695.431,1828.9 695.431,1774.46C695.431,1720.01 676.248,1667.31 641.25,1625.6C676.248,1667.31 695.431,1720.01 695.431,1774.46C695.431,1828.9 676.248,1881.61 641.25,1923.32Z" style="fill:none;stroke:black;stroke-width:29.53px;"/>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>
