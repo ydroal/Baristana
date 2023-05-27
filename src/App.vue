@@ -1,5 +1,5 @@
 <template>
-  <div :style="bgStyle">
+  <div :style="[bgStyle, bgOverrideStyle]">
     <Header />
     <RouterView />
   </div>
@@ -25,6 +25,14 @@ export default {
         backgroundSize: 'cover',
         backgroundPosition: 'center'
       };
+    },
+    bgOverrideStyle() {
+      if (this.$route.name === 'user-setting') {
+        return {
+          background: '#EFECE0'
+        };
+      }
+      return {};
     }
   }
 };
