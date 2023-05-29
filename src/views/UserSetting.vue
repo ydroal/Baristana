@@ -121,6 +121,9 @@ hr {
   margin-top: 0.4rem;
   border: none;
   padding: 0 10px;
+  color: #232121;
+  font-weight: 300;
+  font-size: 0.8rem;
 }
 .user-setting_input:focus {
   outline: none;

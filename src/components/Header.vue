@@ -1,6 +1,6 @@
 <template>
   <header class="header">
-    <img :src="Logo" alt="Logo" class="logo" />
+    <router-link to="/"><img :src="Logo" alt="Logo" class="logo" /></router-link>
     <div class="right">
       <button v-if="!userLoggedIn" @click="login" class="login-button">Log in</button>
       <div v-else class="user_info">
@@ -29,7 +29,6 @@ export default {
     const loginModalStore = useLoginModalStore();
 
     function login() {
-      console.log('login method called');
       loginModalStore.openModal();
     }
     return {
@@ -62,6 +61,7 @@ export default {
 .logo {
   width: 220px;
   height: auto;
+  margin-left: 1.5%;
 }
 .user_icon {
   height: 45px;
@@ -75,7 +75,7 @@ export default {
   padding: 10px 12px 10px 12px;
   border-radius: 60px;
   border-style: none;
-  margin: 1rem;
+  margin: 1rem 2rem 1rem 1rem;
   font-size: 0.9rem;
 }
 </style>

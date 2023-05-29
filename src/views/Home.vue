@@ -40,7 +40,6 @@ export default {
   },
   setup() {
     const loginModalStore = useLoginModalStore();
-    console.log(loginModalStore);
 
     // Vueのrefを作成
     const isLoginModalOpen = ref(loginModalStore.$state.isOpen);
@@ -50,9 +49,8 @@ export default {
       isLoginModalOpen.value = loginModalStore.$state.isOpen;
     });
 
-    // closeModal function を更新
+    // closeModal functionを更新
     const closeModal = () => {
-      console.log('Received close event');
       loginModalStore.closeModal(); // Pinia storeの状態も更新
     };
 
@@ -60,7 +58,7 @@ export default {
       isLoginModalOpen,
       openLoginModal: loginModalStore.openModal,
       closeModal,
-      loginModalStore // 必要な場合
+      loginModalStore
     };
   }
 };
