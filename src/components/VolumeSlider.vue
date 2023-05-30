@@ -1,11 +1,9 @@
 <template>
-  <div class="volume_slider">
-    <span class="volume_label">{{ soundType }}</span>
-    <div class="volume_control">
-      <img :src="isPlaying ? PauseIcon : VolumeIcon" alt="Volume Icon" class="volume_icon" @click="toggleAudio" />
-      <div class="volume_bar" ref="volumeBar" @mousemove="adjustVolume" @mouseup="stopVolumeAdjust">
-        <div class="volume_handle" @mousedown="startVolumeAdjust" :style="{ left: volume + '%' }"></div>
-      </div>
+  <div class="volume-slider">
+    <span class="volume-label">{{ soundType }}</span>
+    <div class="volume-control">
+      <img :src="isPlaying ? PauseIcon : VolumeIcon" alt="Volume Icon" class="volume-icon" @click="toggleAudio" />
+      <input type="range" min="0" max="100" v-model="volume" class="slider" />
     </div>
   </div>
 </template>
@@ -22,75 +20,101 @@ export default {
       PauseIcon,
       isPlaying: false,
       volume: 50, // 初期音量を50に設定
-      adjustingVolume: false
+      audio: null
     };
+  },
+  // コンポーネントが作成されたとき(createdライフサイクルフック)
+  created() {
+    // 音声ファイルを読み込み
+    this.audio = new Audio(this.audioSource);
+    // 音量を設定
+    this.audio.volume = this.volume / 100;
   },
   methods: {
     toggleAudio() {
-      // ここで音声再生・停止を実装します
+      // ここで音声再生・停止を実装
       this.isPlaying = !this.isPlaying;
-    },
-    startVolumeAdjust(event) {
-      this.adjustingVolume = true;
-      // Handle the initial mousedown event
-      this.adjustVolume(event);
-    },
-    adjustVolume(event) {
-      if (!this.adjustingVolume) return;
-      // イベントオブジェクトからマウスポインタの位置(.volume_bar element)を取得し、音量を計算し調整します
-      let rect = this.$refs.volumeBar.getBoundingClientRect();
-      let x = event.clientX - rect.left; // x position within the element
-      let width = rect.width;
-      let newVolume = Math.floor((x / width) * 100);
-      // Set the volume, making sure it stays between 0 and 100
-      this.volume = Math.min(Math.max(newVolume, 0), 100);
-    },
-    stopVolumeAdjust() {
-      this.adjustingVolume = false;
+      if (this.isPlaying) {
+        this.audio.play();
+      } else {
+        this.audio.pause();
+      }
+    }
+  },
+  // volumeデータの変更を監視、その変更があった時点で音源の音量を更新
+  watch: {
+    volume(newVolume) {
+      this.audio.volume = newVolume / 100;
     }
   }
 };
 </script>
 
 <style scoped>
-.volume_slider {
+/* ベーススタイル */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  background: transparent;
+  cursor: pointer;
+}
+/* Track: Chrome, Safari, Opera, Edge Chromium */
+input[type='range']::-webkit-slider-runnable-track {
+  width: 300px;
+  height: 1.8px;
+  background-color: #232121;
+}
+
+/* Thumb: Chrome, Safari, Opera, Edge Chromium */
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 8px;
+  height: 18px;
+  border-radius: 5px;
+  background-color: #514e48;
+  margin-top: -9px;
+}
+/* Track: Firefox */
+input[type='range']::-moz-range-track {
+  width: 300px;
+  height: 1.8px;
+  background-color: #232121;
+}
+/* Thumb: Firefox */
+input[type='range']::-moz-range-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 8px;
+  height: 18px;
+  border-radius: 5px;
+  background-color: #514e48;
+  margin-top: -9px;
+  border: none;
+}
+.volume-slider {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
 
-.volume_label {
-  margin-right: 10px;
+.volume-label {
   font-size: 0.8rem;
   font-weight: 600;
 }
-
-.volume_control {
+.volume-control {
   display: flex;
   align-items: center;
-  margin-top: 2.5%;
+  margin-top: 0.5rem;
+  margin-bottom: 1.4rem;
 }
-.volume_icon {
+.volume-icon {
   height: 2rem;
   text-align: left;
 }
-
-.volume_bar {
-  position: relative;
+.slider {
   width: 300px;
-  height: 2px;
-  background-color: #232121;
   margin-left: 12px;
-}
-
-.volume_handle {
-  position: absolute;
-  width: 8px;
-  height: 18px;
-  border-radius: 5px;
-  background-color: #514e48;
-  top: 50%;
-  transform: translateY(-50%);
-  /* left property will be managed by JavaScript */
 }
 </style>
