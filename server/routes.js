@@ -10,40 +10,52 @@ router.get('/', (req, res) => {
   res.send('Hello from API');
 });
 
-app.get('/bgm/:id', (req, res) => {
-  // get the id from the URL parameters
-  const id = req.params.id;  
-  // SQL query to get the BGM URL
-  const query = 'SELECT url FROM bgm WHERE id = ?';  
+router.get('/bgm/:category', (req, res) => {
+  // カテゴリをURLパラメータから取得
+  const category = req.params.category;  
+  // BGMのURLを取得するSQLクエリ
+  const query = "SELECT file_url FROM bgm WHERE file_url LIKE CONCAT('%', ?, '%')";
+    
 
-  db.query(query, id, (error, results) => {
+  connection.query(query, category, (error, results) => {
+    console.log('query:', query);
+    console.log('category:', category);
+    console.log('results:', results);
     if (error) {
-      // handle error
+      // エラー処理
       res.status(500).send('An error occurred while fetching the BGM URL.');
     } else {
-      // send the URL in the response
-      res.json({ url: results[0].url });
-    }
-  });
+      s3_bucket_name = "baristana"
+      s3_region = "eu-west-3"
+      // クエリ結果のすべてのURLを抽出し、レスポンスとして送信
+      const urls = results.map(result => {
+        const obj_key = result.file_url;
+        const file_url = `https://${s3_bucket_name}.s3.${s3_region}.amazonaws.com/${obj_key}`;
+        return file_url;
+      });
+      // urlsというプロパティ名でurls配列を持つJSONオブジェクトをレスポンスボディとして返す
+      res.json({ urls });
+    };
+});
 });
 
-app.post('/chat/messages', (req, res) => {
+router.post('/chat/messages', (req, res) => {
   // Sends a chat message and stores it in the database
 });
 
-app.post('/auth/login', (req, res) => {
+router.post('/auth/login', (req, res) => {
   // Authenticate the user by their login information
 });
 
-app.get('/auth/user', (req, res) => {
+router.get('/auth/user', (req, res) => {
   // Retrieves information for the currently logged-in user
 });
 
-app.get('/chat/active_users', (req, res) => {
+router.get('/chat/active_users', (req, res) => {
   // GET: Obtain the current active user (logged-in user) count
 });
 
-app.get('/auth/google', (req, res) => {
+router.get('/auth/google', (req, res) => {
   // POST: Authenticates the user with their Google account
 });
 

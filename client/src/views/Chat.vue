@@ -1,10 +1,13 @@
 <template>
   <div class="chat-page">
-    <div class="volume-slider">
-      <VolumeSlider soundType="Cafe music" audioSource="url-to-cafe-music" />
-      <VolumeSlider soundType="Barista sounds" audioSource="url-to-barista-sounds" />
-      <VolumeSlider soundType="People talking" audioSource="url-to-people-talking" />
-      <ToggleButton class="chat-toggle" />
+    <div class="volume-slider" v-if="isAudioSourcesLoaded">
+      <!-- <pre>{{ cafeMusic }}</pre>
+      <pre>{{ baristaSounds }}</pre>
+      <pre>{{ peopleTalking }}</pre> -->
+      <VolumeSlider soundType="Cafe music" :audioSources="cafeMusic" />
+      <VolumeSlider soundType="Barista sounds" :audioSources="baristaSounds" />
+      <VolumeSlider soundType="People talking" :audioSources="peopleTalking" />
+      <ToggleButton class="chat-toggle" @click="toggleChatDisplay" />
     </div>
     <div class="chat-table">
       <!-- active user information -->
@@ -57,6 +60,9 @@
 
 <script>
 // import axios from 'axios';
+import { ref, computed, onMounted } from 'vue';
+import { useBgmStore } from '@/stores/bgm';
+import { useRouter } from 'vue-router';
 import VolumeSlider from '../components/VolumeSlider.vue';
 import ToggleButton from '../components/ToggleButton.vue';
 import EmojiIcon from '@/assets/images/icon_emoji.svg';
@@ -65,70 +71,179 @@ import EmojiPicker from '@/components/EmojiPicker.vue';
 import UserIcon2 from '@/assets/images/icon_user2.png';
 
 export default {
-  data() {
-    return {
-      activeUsers: [
-        { id: 1, name: 'Julien' },
-        { id: 2, icon: UserIcon2, name: 'Issey' },
-        { id: 3, name: 'Emma' },
-        { id: 4, name: 'Yon' }
-      ],
-      currentUserId: 1,
-      messages: [
-        { user: 1, text: 'Hello!' },
-        {
-          user: 2,
-          text: 'Hi there! blablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablabla'
-        },
-        { user: 2, text: 'How are you?' },
-        {
-          user: 1,
-          text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum'
-        },
-        {
-          user: 2,
-          text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pellentesque nec nam aliquam sem. Tempus egestas sed sed risus pretium quam. Odio tempor orci dapibus ultrices in iaculis nunc sed augue. Auctor eu augue ut lectus arcu bibendum at varius. Senectus et netus et malesuada fames ac turpis egestas sed.'
-        },
-        { user: 2, text: 'Hello!' }
-      ],
-      EmojiIcon,
-      AttachIcon,
-      message: '',
-      showEmojiPicker: false,
-      UserIcon2
-    };
-  },
-  computed: {
-    displayedUsers() {
-      // Return only the first 3 active users
-      return this.activeUsers.slice(0, 3);
-    }
-  },
-  methods: {
-    // emojiは選択された絵文字
-    addEmoji(emoji) {
-      // 選択された絵文字を現在のメッセージに追加
-      this.message += emoji;
-      // 絵文字ピッカーを閉じる
-      this.showEmojiPicker = false;
-    },
-    triggerFileInput() {
-      this.$refs.fileInput.click();
-    },
-    handleFileUpload(event) {
-      const file = event.target.files[0];
-      console.log(file); // デバッグ用
-      // アップロードファイルの処理を書く
-    },
-    getUserById(id) {
-      return this.activeUsers.find(user => user.id === id);
-    }
-  },
   components: {
     VolumeSlider,
     ToggleButton,
     EmojiPicker
+  },
+  setup() {
+    const bgmStore = useBgmStore();
+
+    // 音源データのフェッチが完了したかどうかを示すステート
+    const isAudioSourcesLoaded = ref(false);
+
+    const cafeMusic = computed(() => bgmStore.cafe_music);
+    const baristaSounds = computed(() => bgmStore.barista_sounds);
+    const peopleTalking = computed(() => bgmStore.people_talking);
+
+    onMounted(async () => {
+      // Promise.all の結果を await で待つように修正
+      await Promise.all([bgmStore.fetchCafeMusic(), bgmStore.fetchBaristaSounds(), bgmStore.fetchPeopleTalking()]);
+      // 音源データのフェッチが完了したらフラグをセット
+      isAudioSourcesLoaded.value = true;
+      // console.log('Cafe music:', cafeMusic.value);
+      // console.log('Barista sounds:', baristaSounds.value);
+      // console.log('People talking:', peopleTalking.value);
+    });
+
+    // chatのオンオフ
+    const isChatVisible = ref(true);
+
+    const router = useRouter();
+    const toggleChatDisplay = () => {
+      isChatVisible.value = !isChatVisible.value;
+      // チャットのアクティブユーザーではなくなったことをDBに伝える処理を追加する
+      router.push('/');
+    };
+
+    let activeUsers = ref([
+      { id: 1, name: 'Julien' },
+      { id: 2, icon: UserIcon2, name: 'Issey' },
+      { id: 3, name: 'Emma' },
+      { id: 4, name: 'Yon' }
+    ]);
+
+    const currentUserId = ref(1);
+
+    let messages = ref([
+      { user: 1, text: 'Hello!' },
+      {
+        user: 2,
+        text: 'Hi there! blablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablabla'
+      },
+      { user: 2, text: 'How are you?' },
+      {
+        user: 1,
+        text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum'
+      },
+      {
+        user: 2,
+        text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pellentesque nec nam aliquam sem. Tempus egestas sed sed risus pretium quam. Odio tempor orci dapibus ultrices in iaculis nunc sed augue. Auctor eu augue ut lectus arcu bibendum at varius. Senectus et netus et malesuada fames ac turpis egestas sed.'
+      },
+      { user: 2, text: 'Hello!' }
+    ]);
+
+    const displayedUsers = computed(() => {
+      // composition apiではthisは使用しない。valueでアクセス
+      return activeUsers.value.slice(0, 3);
+    });
+
+    const message = ref('');
+    const showEmojiPicker = ref(false);
+
+    const addEmoji = (emoji) => {
+      message.value += emoji;
+      showEmojiPicker.value = false;
+    };
+
+    const fileInput = ref(null);
+
+    const triggerFileInput = () => {
+      fileInput.value.click();
+    };
+
+    const handleFileUpload = (event) => {
+      const file = event.target.files[0];
+      console.log(file); // デバッグ用
+      // アップロードファイルの処理を書く
+    };
+
+    const getUserById = (id) => {
+      return activeUsers.value.find(user => user.id === id);
+    };
+
+    return {
+      cafeMusic,
+      baristaSounds,
+      peopleTalking,
+      isAudioSourcesLoaded,
+      activeUsers,
+      currentUserId,
+      messages,
+      displayedUsers,
+      EmojiIcon,
+      AttachIcon,
+      message,
+      showEmojiPicker,
+      UserIcon2,
+      fileInput,
+      addEmoji,
+      triggerFileInput,
+      handleFileUpload,
+      getUserById,
+      toggleChatDisplay
+    };
   }
+  // オプションAPI
+  // data() {
+  //   return {
+  //     activeUsers: [
+  //       { id: 1, name: 'Julien' },
+  //       { id: 2, icon: UserIcon2, name: 'Issey' },
+  //       { id: 3, name: 'Emma' },
+  //       { id: 4, name: 'Yon' }
+  //     ],
+  //     currentUserId: 1,
+  //     messages: [
+  //       { user: 1, text: 'Hello!' },
+  //       {
+  //         user: 2,
+  //         text: 'Hi there! blablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablabla'
+  //       },
+  //       { user: 2, text: 'How are you?' },
+  //       {
+  //         user: 1,
+  //         text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum'
+  //       },
+  //       {
+  //         user: 2,
+  //         text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pellentesque nec nam aliquam sem. Tempus egestas sed sed risus pretium quam. Odio tempor orci dapibus ultrices in iaculis nunc sed augue. Auctor eu augue ut lectus arcu bibendum at varius. Senectus et netus et malesuada fames ac turpis egestas sed.'
+  //       },
+  //       { user: 2, text: 'Hello!' }
+  //     ],
+  //     EmojiIcon,
+  //     AttachIcon,
+  //     message: '',
+  //     showEmojiPicker: false,
+  //     UserIcon2
+  //   };
+  // },
+  // computed: {
+  //   displayedUsers() {
+  //     // Return only the first 3 active users
+  //     return this.activeUsers.slice(0, 3);
+  //   }
+  // },
+  // methods: {
+  //   // emojiは選択された絵文字
+  //   addEmoji(emoji) {
+  //     // 選択された絵文字を現在のメッセージに追加
+  //     this.message += emoji;
+  //     // 絵文字ピッカーを閉じる
+  //     this.showEmojiPicker = false;
+  //   },
+  //   triggerFileInput() {
+  //     this.$refs.fileInput.click();
+  //   },
+  //   handleFileUpload(event) {
+  //     const file = event.target.files[0];
+  //     console.log(file); // デバッグ用
+  //     // アップロードファイルの処理を書く
+  //   },
+  //   getUserById(id) {
+  //     return this.activeUsers.find(user => user.id === id);
+  //   }
+  // }
 };
 </script>
 
@@ -171,10 +286,11 @@ select::-ms-expand {
 }
 
 .volume-slider {
-  width: 33.33%;
-  margin-top: 5.6%;
+  width: 30%;
+  margin-top: 4%;
   margin-left: 2.8%;
 }
+
 .chat-toggle {
   margin-left: 2.8%;
 }
