@@ -3,9 +3,12 @@
 
 const express = require('express');
 const routes = require('./routes');
+const cors = require('cors');
 // Expressモジュールを実体化して、定数appに代入
 const app = express();
 const port = 3000;
+
+app.use(cors());
 
 //'/'パスにGET要求があった際に実行する処理
 app.get('/', (req, res) => {

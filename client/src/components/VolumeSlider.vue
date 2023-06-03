@@ -1,5 +1,7 @@
 <template>
   <div class="volume-slider">
+    <!-- Debug information -->
+    <!-- <pre>{{ audioSources }}</pre> -->
     <span class="volume-label">{{ soundType }}</span>
     <div class="volume-control">
       <img :src="isPlaying ? PauseIcon : VolumeIcon" alt="Volume Icon" class="volume-icon" @click="toggleAudio" />
@@ -13,32 +15,48 @@ import VolumeIcon from '@/assets/images/icon_onsei.svg';
 import PauseIcon from '@/assets/images/icon_pause.svg';
 
 export default {
-  props: ['soundType', 'audioSource'],
+  props: ['soundType', 'audioSources'],
   data() {
     return {
       VolumeIcon,
       PauseIcon,
       isPlaying: false,
       volume: 50, // 初期音量を50に設定
-      audio: null
+      audio: null,
+      currentSourceIndex: 0
     };
   },
   // コンポーネントが作成されたとき(createdライフサイクルフック)
   created() {
-    // 音声ファイルを読み込み
-    this.audio = new Audio(this.audioSource);
-    // 音量を設定
-    this.audio.volume = this.volume / 100;
+    if (this.audioSources && this.audioSources.length > 0) {
+      console.log('Received audioSources:', this.audioSources);
+      // 音声ファイルを読み込み
+      this.audio = new Audio(this.audioSources[this.currentSourceIndex]);
+      // 音量を設定
+      this.audio.volume = this.volume / 100;
+      // 音声ファイルの再生が終了したら次のファイルを再生
+      this.audio.onended = this.nextAudio;
+    }
   },
   methods: {
     toggleAudio() {
       // ここで音声再生・停止を実装
+      if (!this.audio) {
+        console.warn('Audio object is not available.');
+        return;
+      }
       this.isPlaying = !this.isPlaying;
       if (this.isPlaying) {
         this.audio.play();
       } else {
         this.audio.pause();
       }
+    },
+    nextAudio() {
+      // 音源リストをループ再生
+      this.currentSourceIndex = (this.currentSourceIndex + 1) % this.audioSources.length;
+      this.audio.src = this.audioSources[this.currentSourceIndex];
+      this.audio.play();
     }
   },
   // volumeデータの変更を監視、その変更があった時点で音源の音量を更新
