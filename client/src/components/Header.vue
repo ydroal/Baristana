@@ -2,9 +2,9 @@
   <header class="header">
     <router-link to="/"><img :src="Logo" alt="Logo" class="logo" /></router-link>
     <div class="right">
-      <button v-if="!userLoggedIn" @click="login" class="login-button">Log in</button>
+      <button v-if="!isLoggedIn" @click="login" class="login-button">Log in</button>
       <div v-else class="user_info">
-        <img :src="UserIcon" alt="UserIcon" class="user_icon" />
+        <img :src="UserIcon" alt="UserIcon" class="user_icon" @click="goToUserSetting" />
         <button @click="logout" class="logout-button">Log out</button>
       </div>
     </div>
@@ -12,33 +12,54 @@
 </template>
 
 <script>
+import { watch, computed } from 'vue';
+import { useLoginModalStore } from '@/stores/loginModal';
+import { useUserStore } from '@/stores/user';
+import { useRouter } from 'vue-router';
 import Logo from '@/assets/images/logo.svg';
 import UserIcon from '@/assets/images/icon_user.svg';
-import { useLoginModalStore } from '@/stores/loginModal';
 
 export default {
   components: {},
   data() {
     return {
       Logo,
-      UserIcon,
-      userLoggedIn: false // これは仮のコードで、実際にはVuexやpropsなどを通じて提供される。
+      UserIcon
     };
   },
   setup() {
     const loginModalStore = useLoginModalStore();
+    const userStore = useUserStore();
+    const router = useRouter();
+
+    // userStore.isLoggedInの変化を監視
+    watch(
+      () => userStore.isLoggedIn,
+      async (newVal, oldVal) => {
+        // ログイン状態が変わった時にユーザー情報を取得
+        if (newVal !== oldVal && newVal === true) {
+          await userStore.fetchUser();
+        }
+      }
+    );
 
     function login() {
       loginModalStore.openModal();
     }
+    function logout() {
+      userStore.logout();
+    }
+    function goToUserSetting() {
+      router.push('/user-setting');
+    }
     return {
-      login
+      login,
+      logout,
+      goToUserSetting,
+      isLoggedIn: computed(() => userStore.isLoggedIn)
     };
   },
   methods: {
-    logout() {
-      // ログアウト処理を記述する
-    },
     navigateToUserSettings() {
       // ユーザー設定ページへのリダイレクト処理を記述する
     }
