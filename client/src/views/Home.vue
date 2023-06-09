@@ -6,6 +6,23 @@
   </header>
 
   <div class="container">
+    <!-- <div id="g_id_onload"
+     data-client_id="872587881454-b9lgp1qeldv4utufq0bo4s19e4hg64tt.apps.googleusercontent.com"
+     data-context="signin"
+     data-ux_mode="http://localhost:5173"
+     data-login_uri="http://localhost:3000/api/auth/google"
+     data-nonce=""
+     data-auto_prompt="false">
+</div>
+
+<div class="g_id_signin"
+     data-type="standard"
+     data-shape="rectangular"
+     data-theme="outline"
+     data-text="signin_with"
+     data-size="large"
+     data-logo_alignment="left">
+</div> -->
     <h1>Create Your Own Cafe Experience</h1>
     <p>
       Baristana is an application that brings the fun times we spend in cafes,

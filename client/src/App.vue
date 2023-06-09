@@ -6,8 +6,9 @@
 </template>
 
 <script>
-import { computed } from 'vue';
-import { RouterLink, RouterView } from 'vue-router';
+import { computed, onMounted } from 'vue';
+import { RouterLink, RouterView, useRoute } from 'vue-router';  // `useRoute` を追加
+import { useUserStore } from '@/stores/user';
 import Header from './components/Header.vue';
 
 import bg1x from '@/assets/images/bg@1x.jpg';
@@ -18,22 +19,32 @@ export default {
   components: {
     Header
   },
-  computed: {
-    bgStyle() {
-      return {
-        backgroundImage: `url(${bg1x}), url(${bg2x}), url(${bg3x})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center'
-      };
-    },
-    bgOverrideStyle() {
-      if (this.$route.name === 'user-setting') {
+  setup() {
+    const store = useUserStore();
+    const route = useRoute();  // 現在のルートを取得
+
+    onMounted(async () => {
+      if (store.isJwtTokenExists()) {
+        await store.fetchUser();
+      }
+    });
+
+    const bgStyle = computed(() => ({
+      backgroundImage: `url(${bg1x}), url(${bg2x}), url(${bg3x})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center'
+    }));
+
+    const bgOverrideStyle = computed(() => {
+      if (route.name === 'user-setting') {  // `route.name` を使用
         return {
           background: '#EFECE0'
         };
       }
       return {};
-    }
+    });
+
+    return { bgStyle, bgOverrideStyle };
   }
 };
 </script>

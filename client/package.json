@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build --mode production",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
     "format": "prettier --write src/"
@@ -20,7 +20,9 @@
     "normalize.css": "^8.0.1",
     "pinia": "^2.0.35",
     "vue": "^3.2.47",
-    "vue-router": "^4.1.6"
+    "vue-google-oauth2": "^1.5.10",
+    "vue-router": "^4.1.6",
+    "vue3-google-oauth2": "^1.0.7"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.2.0",

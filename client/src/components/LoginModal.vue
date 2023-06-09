@@ -4,7 +4,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&display=swap" rel="stylesheet" />
   </header>
-
   <div v-if="isOpen" class="overlay">
     <div class="modal">
       <div class="modal_header">
@@ -13,14 +12,35 @@
         <img src="@/assets/images/logo.svg" alt="Baristana Logo" class="logo" />
       </div>
       <div class="modal_body">
-        <button
+        <div
+          v-if="isOpen"
+          id="g_id_onload"
+          :data-client_id="googleClientId"
+          data-context="signin"
+          data-ux_mode="http://localhost:5173"
+          data-login_uri="http://localhost:3000/api/auth/google"
+          data-nonce=""
+          data-auto_prompt="false"
+        ></div>
+        <div
+          v-if="isOpen"
+          class="g_id_signin"
+          data-type="standard"
+          data-shape="rectangular"
+          data-theme="outline"
+          data-text="signin_with"
+          data-size="large"
+          data-logo_alignment="left"
+        ></div>
+        <!-- <button
           id="customBtn"
           class="login_button"
           @mouseover="buttonHover"
           @mouseleave="buttonNormal"
           @mousedown="buttonPress"
           @mouseup="buttonNormal"
-        ></button>
+          @click="initializeGoogleSignIn"
+        ></button> -->
       </div>
       <button class="close_button" @click="closeModal">&#10005;</button>
     </div>
@@ -28,6 +48,22 @@
 </template>
 
 <script>
+import axios from 'axios';
+import { useUserStore } from '@/stores/user';
+
+// GoogleのJavaScriptライブラリ（外部ライブラリ）を非同期で読み込む
+// 内部的に使用されるヘルパー関数
+// function loadScript(url) {
+//   return new Promise((resolve, reject) => {
+//     let script = document.createElement('script');
+//     script.src = url;
+//     script.async = true;
+//     script.defer = true;
+//     script.onload = resolve;
+//     script.onerror = reject;
+//     document.body.appendChild(script);
+//   });
+// }
 export default {
   props: {
     isOpen: {
@@ -35,50 +71,88 @@ export default {
       required: true
     }
   },
+  updated() {
+    // モーダルが開き、Googleのライブラリが読み込まれていて、Googleの認証関連のオブジェクトとメソッドが利用可能
+    if (this.isOpen && typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+      google.accounts.id.initialize({
+        client_id: this.googleClientId,
+        callback: this.handleCredentialResponse
+      });
+      // Google Sign-Inのボタンを表示
+      google.accounts.id.renderButton(document.getElementById('g_id_onload'), { theme: 'outline', size: 'large' });
+    }
+  },
+  computed: {
+    googleClientId() {
+      return import.meta.env.VITE_APP_GOOGLE_CLIENT_ID;
+    }
+  },
   methods: {
     closeModal() {
       console.log('Emitting close event');
       this.$emit('close');
     },
-    buttonHover() {
-      this.buttonState = 'focus';
+    // buttonHover() {
+    //   this.buttonState = 'focus';
+    // },
+    // buttonNormal() {
+    //   this.buttonState = 'normal';
+    // },
+    // buttonPress() {
+    //   this.buttonState = 'pressed';
+    // },
+    // ユーザーに再認証を要求するためのメソッド
+    initializeGoogleSignIn() {
+      if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+        google.accounts.id.prompt();
+      }
     },
-    buttonNormal() {
-      this.buttonState = 'normal';
-    },
-    buttonPress() {
-      this.buttonState = 'pressed';
-    },
-    startApp() {
-      gapi.load('auth2', () => {
-        // Retrieve the singleton for the GoogleAuth library and set up the client.
-        auth2 = gapi.auth2.init({
-          client_id: 'YOUR_CLIENT_ID.apps.googleusercontent.com',
-          cookiepolicy: 'single_host_origin'
-          // Request scopes in addition to 'profile' and 'email'
-          // scope: 'additional_scope'
+    // Google Sign-Inからのレスポンスをハンドリング
+    handleCredentialResponse(response) {
+      const idToken = response.credential;
+      console.log('ID Token: ' + idToken);
+      console.log('Attempting to authenticate...');
+      // ID tokenをバックエンドに送信
+      const userStore = useUserStore();
+      axios
+        .post('http://localhost:3000/api/auth/google/onetap', { idToken: idToken })
+        .then(res => {
+          console.log('Received response from server', res);
+          if (res.status === 200) {
+            console.log('Authentication succeeded!');
+            // resにトークンが含まれていたらlocalStorageに保存
+            if (res.data.token) {
+              console.log(res.data.token);
+              localStorage.setItem('jwt', res.data.token);
+              console.log(localStorage.getItem('jwt'));
+              // ユーザー情報を取得
+              userStore.fetchUser();
+            }
+            this.$emit('close');
+          }
+        })
+        .catch(error => {
+          console.error('Authentication failed: ', error);
         });
-        this.attachSignin(document.getElementById('customBtn'));
-      });
     },
-    attachSignin(element) {
-      auth2.attachClickHandler(
-        element,
-        {},
-        googleUser => {
-          this.username = googleUser.getBasicProfile().getName();
-          console.log('Signed in: ' + this.username);
-        },
-        function (error) {
-          alert(JSON.stringify(error, undefined, 2));
-        }
-      );
+    // Google Sign-Inを初期化し、ユーザーに再認証を要求
+    initializeGoogleSignInButton() {
+      if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+        // Google Sign-Inを初期化
+        google.accounts.id.initialize({
+          client_id: this.googleClientId,
+          callback: this.handleCredentialResponse
+        });
+        // ユーザーに再認証を要求するためのメソッド
+        google.accounts.id.prompt();
+      }
     }
   },
   data() {
     return {
       username: '',
-      buttonState: 'normal'
+      buttonState: 'normal',
+      googleLoaded: false
     };
   }
 };
@@ -153,6 +227,7 @@ p {
   right: 0.5%;
 }
 
+/* 自作ボタン
 .login_button {
   width: 190px;
   height: 46px;
@@ -163,19 +238,16 @@ p {
 }
 
 .login_button {
-  /* Apply the normal state image. */
   background-image: url('@/assets/images/btn_google_signin_light_normal_web@2x.png');
 }
 
 .login_button:hover {
-  /* Apply the focus state image. */
   background-image: url('@/assets/images/btn_google_signin_light_focus_web@2x.png');
 }
 
 .login_button:active {
-  /* Apply the pressed state image. */
   background-image: url('@/assets/images/btn_google_signin_light_pressed_web@2x.png');
-}
+} */
 .close_button {
   position: absolute;
   top: 0.3%;
