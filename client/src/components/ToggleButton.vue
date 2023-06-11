@@ -2,18 +2,45 @@
   <div class="chatting_btn">
     <span class="btn_label">Chatting</span>
     <label class="toggle_btn">
-      <input type="checkbox" />
+      <input type="checkbox" v-model="isChatActive" @change="handleToggleChange" />
     </label>
   </div>
 </template>
 
 <script>
+import { useUserStore } from '@/stores/user';
+
 export default {
   data() {
-    return {};
+    const userStore = useUserStore();
+    return {
+      isChatActive: userStore.chat_enabled // 初期値をuserStoreから取得
+    };
   },
+  // computed: {
+  //   isChatActive() {
+  //     return useUserStore().chat_enabled;
+  //   }
+  // },
+  // props: ['isChatActive'], // propsを追加
+  // methods: {
+  //   handleToggleChange() {
+  //     // イベントtoggle-chatを発火し、isChatActiveの値をイベントの引数として親コンポーネントに送る
+  //     this.$emit('toggle-chat', this.isChatActive); // トグルステータスが変更されたときにイベントを発火
+  //   }
+  // }
+  // methods: {
+  //   async handleToggleChange() {
+  //     const userStore = useUserStore();
+  //     await userStore.toggleChatEnabled(); // chat_enabled の値をトグル
+  //     this.$emit('toggle-chat', userStore.chat_enabled); // 新しい状態を親コンポーネントに送る
+  //   }
+  // }
   methods: {
-    // 必要に応じて、音量を変更するためのメソッドをここに定義する
+    handleToggleChange() {
+      // イベントtoggle-chatを発火し、isChatActiveの値をイベントの引数として親コンポーネントに送る
+      this.$emit('toggle-chat', this.isChatActive); // トグルステータスが変更されたときにイベントを発火
+    }
   }
 };
 </script>

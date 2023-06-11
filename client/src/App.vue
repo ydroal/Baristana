@@ -7,7 +7,7 @@
 
 <script>
 import { computed, onMounted } from 'vue';
-import { RouterLink, RouterView, useRoute } from 'vue-router';  // `useRoute` を追加
+import { RouterLink, RouterView, useRoute } from 'vue-router'; // useRouteを追加
 import { useUserStore } from '@/stores/user';
 import Header from './components/Header.vue';
 

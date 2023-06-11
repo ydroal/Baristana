@@ -1,11 +1,14 @@
 // HTTPリクエストに応答してデータベース操作（レコードの作成、読み込み、更新、削除など）を実行するモジュール
+
 const express = require('express');
 // ルーター機能を導入
 const router = express.Router();
 const connection = require('./db');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+// OAuth2.0の認証を通す
 const { OAuth2Client } = require('google-auth-library');
+// JWTの作成・検証用library
 const jwt = require('jsonwebtoken');
 // verifyToken ミドルウェアのインポート
 const verifyToken = require('./verifyToken');
@@ -71,7 +74,6 @@ router.get('/', (req, res) => {
 //     });
 //   });
 // }));
-    
 
 router.get('/bgm/:category', (req, res) => {
   // カテゴリをURLパラメータから取得
@@ -113,7 +115,7 @@ router.get('/chat/active_users', (req, res) => {
   // GET: Obtain the current active user (logged-in user) count
 });
 
-// ユーザーをGoogleのログインページにリダイレクトする
+// ユーザーをGoogleのログインページにリダイレクトする（不要）
 // router.get('/auth/google', passport.authenticate('google', {
   //   scope: ['profile', 'email']
   // }));
@@ -130,86 +132,142 @@ const client = new OAuth2Client(CLIENT_ID);  // Google API Consoleで取得し�
 router.post('/auth/google/onetap', async (req, res) => {
   const idToken = req.body.idToken;
   console.log('Received ID token:', idToken);
-  // IDトークンを検証し、検証が成功したらユーザーを認証する処理
+
   try {
+    // IDトークンを検証し、検証が成功したらユーザーを認証する処理
     const ticket = await client.verifyIdToken({
-    idToken,
-    audience: CLIENT_ID,
+      idToken,
+      audience: CLIENT_ID,
     });
     // 他にもpayloadには、ユーザーの名前やメールアドレスなどが含まれます
     const payload = ticket.getPayload();
-    const userid = payload['sub'];
+    const googleId = payload['sub'];
     const username = payload['name'];
     const email = payload['email'];
     const accessToken = payload['at_hash'];
     const refreshToken = payload['rt_hash'];
-    
+
     // ユーザーの一意性を確認し、新規ユーザーであればDBにレコードを作成、既存ユーザーであればレコードを更新
     const query = `
     INSERT INTO user (google_id, username, email, created_at, access_token, refresh_token) 
     VALUES (?, ?, ?, NOW(), ?, ?)
     ON DUPLICATE KEY UPDATE username = ?, email = ?, access_token = ?, refresh_token = ?;
     `;
-    const params = [userid, username, email, accessToken, refreshToken, username, email, accessToken, refreshToken];
-    
-    connection.query(query, params, function(error, results) {
-      if (error) {
-        console.error(error);
-        res.sendStatus(500); // サーバーエラーを示すHTTPステータスコード
-      } else {
-        // JWT トークンを発行
-        const jwtToken = issueToken(userid);
-        // トークンをレスポンスとして送信
-        res.json({ token: jwtToken });
-        
-        // データベースの操作が成功した後でセッションにユーザー情報を保存する
-        //     req.login({ id: userid, username: username }, (err) => {
-          //       if (err) {
-            //         console.error(err);
-            //         res.sendStatus(500);
-            //       } else {
-              //         res.sendStatus(200);// OKレスポンスを返す
-              //       }
-              // });
-            }
-          });
-        } catch (e) {
-          // IDトークンの検証に失敗したら、エラーレスポンスを返す
-          console.error(e);
-          res.sendStatus(400);
-        }
-      });
-      
-      // JWTの発行
-      function issueToken(userId) {
-        const payload = { id: userId };
-        return jwt.sign(payload, secretKey, { expiresIn: '1d' }); // 有効期限を1日とする
-      }
+    const params = [googleId, username, email, accessToken, refreshToken, username, email, accessToken, refreshToken];
 
-      router.get('/auth/user', verifyToken, (req, res) => {
-        if (req.user) { // ユーザーがログインしている場合
-          res.json(req.user); // ログインユーザーの情報を返す
-        } else { // ユーザーがログインしていない場合
-          res.status(401).json({ message: 'No user is logged in' }); // エラーメッセージを返す
+    // connection.queryをPromiseでラップする
+    await new Promise((resolve, reject) => {
+      connection.query(query, params, function (error, results) {
+        if (error) {
+          console.error(error);
+          reject(error);
+          return;
         }
+        resolve(results);
       });
+    });
 
-      // // ログアウト
-      // router.get('/auth/logout', (req, res) => {
-        //   req.logout();  // Passport.js の機能
-        //   res.sendStatus(200);  // ログアウト成功を返す
-        // });
-        
-        // ログアウト（公式からコピーしたコード。POST＆コールバックが必要？）
-        router.post('/auth/logout', function(req, res, next) {
-          req.logout(function(err) {
-    if (err) { 
-      return next(err); 
+    // userテーブルからidを取得
+    const userId = await getUserId(googleId);
+
+    // JWT トークンを発行
+    const jwtToken = issueToken(userId);
+
+    // トークンをレスポンスとして送信
+    res.json({ token: jwtToken });
+
+    // active_userテーブルにもレコードを挿入
+    const activeUserQuery = `
+    INSERT INTO active_user (user_id, last_activity, chat_enabled)
+    VALUES (?, NOW(), false)
+    ON DUPLICATE KEY UPDATE last_activity = NOW();
+    `;
+
+    //をPromiseでラップする
+    await new Promise((resolve, reject) => {
+      connection.query(activeUserQuery, [userId], function (error, results) {
+        if (error) {
+          console.error(error);
+          reject(error); // promiseをerrorでrejectする
+          return;
+        }
+        resolve(results); // promiseをresultsでresolveする
+      });
+    });
+  } catch (e) {
+    // IDトークンの検証に失敗したら、エラーレスポンスを返す
+    console.error(e);
+    res.sendStatus(400);
     }
+});
+
+// JWTトークンの発行
+function issueToken(userId) {
+const payload = { id: userId };
+return jwt.sign(payload, secretKey, { expiresIn: '1d' }); // 有効期限を1日とする
+}
+
+// userテーブルからユーザーのidを取得する
+async function getUserId(googleId) {
+  return new Promise((resolve, reject) => {
+    const query = 'SELECT id FROM user WHERE google_id = ?';
+    connection.query(query, [googleId], function (error, results) {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(results[0].id);
+      }
+    });
+  });
+}
+
+router.get('/auth/user', verifyToken, (req, res) => {
+  if (req.user) { // ユーザーがログインしている場合
+    res.json(req.user); // ログインユーザーの情報を返す
+  } else { // ユーザーがログインしていない場合
+    res.status(401).json({ message: 'No user is logged in' }); // エラーメッセージを返す
+  }
+});
+
+// ログアウト（公式からコピーしたコード。POST＆コールバックが必要？）
+// router.post('/auth/logout', function(req, res, next) {
+//   req.logout(function(err) {
+//     if (err) { 
+//       return next(err); 
+//     }
+//     res.sendStatus(200);
+//   });
+// });
+
+// 新ログアウト
+router.post('/auth/logout', verifyToken, (req, res, next) => {
+  // req.user には verifyTokenミドルウェアにより認証されたユーザー情報が格納されている
+  const userId = req.user.id;
+
+  // userIdを使ってactive_userテーブルから該当レコードを削除
+  const query = `DELETE FROM active_user WHERE user_id = ?`;
+  connection.query(query, [userId], function (error, results, fields) {
+    if (error) throw error;
+    // レコードの削除が成功したらHTTP 200を返す
+    console.log('レコード削除したよ');
     res.sendStatus(200);
   });
 });
 
+// chat_enabledの値をトグルする
+router.put('/active_user/:id/chat_enabled', verifyToken, (req, res) => {
+  const userId = req.params.id;  // データベースのユーザーIDを取得
+  const chatEnabled = req.body.chat_enabled;
+
+  // userIdが存在するか確認は省略。存在しない場合はUPDATE文が何も影響を与えず、エラーは発生しないからです。
+  const sql = 'UPDATE active_user SET chat_enabled = ? WHERE user_id = ?';
+  connection.query(sql, [chatEnabled, userId], (err, results) => {
+    if (err) {
+      console.log(err);  // エラーを出力
+      return res.status(500).send({message: 'Database update failed.'});
+    }
+    res.send({message: 'Chat status updated successfully.'});
+  });
+});
 
 module.exports = router;
-
