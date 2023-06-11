@@ -7,7 +7,7 @@
       <VolumeSlider soundType="Cafe music" :audioSources="cafeMusic" />
       <VolumeSlider soundType="Barista sounds" :audioSources="baristaSounds" />
       <VolumeSlider soundType="People talking" :audioSources="peopleTalking" />
-      <ToggleButton class="chat-toggle" @click="toggleChatDisplay" />
+      <ToggleButton class="chat-toggle" @click="toggleChatDisplay" @toggle-chat="handleChatToggle" />
     </div>
     <div class="chat-table">
       <!-- active user information -->
@@ -63,6 +63,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useBgmStore } from '@/stores/bgm';
 import { useRouter } from 'vue-router';
+import { useUserStore } from '@/stores/user';
 import VolumeSlider from '../components/VolumeSlider.vue';
 import ToggleButton from '../components/ToggleButton.vue';
 import EmojiIcon from '@/assets/images/icon_emoji.svg';
@@ -78,6 +79,7 @@ export default {
   },
   setup() {
     const bgmStore = useBgmStore();
+    const userStore = useUserStore();
 
     // 音源データのフェッチが完了したかどうかを示すステート
     const isAudioSourcesLoaded = ref(false);
@@ -96,15 +98,34 @@ export default {
       // console.log('People talking:', peopleTalking.value);
     });
 
+    // チャットがオンオフを制御する関数
+    const handleChatToggle = async isChatActive => {
+      console.log('chat Page:handleChatToggle called with:', isChatActive);
+      if (userStore.isLoggedIn) {
+        await userStore.toggleChatEnabled(isChatActive);
+      }
+
+      if (!isChatActive) {
+        router.push('/'); // チャットが非アクティブの場合、ホームにリダイレクト
+      }
+    };
+
     // chatのオンオフ
     const isChatVisible = ref(true);
 
     const router = useRouter();
     const toggleChatDisplay = () => {
       isChatVisible.value = !isChatVisible.value;
-      // チャットのアクティブユーザーではなくなったことをDBに伝える処理を追加する
-      router.push('/');
+      handleChatToggle(isChatVisible.value);
+      if (!isChatVisible.value) {
+        router.push('/');
+      }
     };
+    // const toggleChatDisplay = () => {
+    //   isChatVisible.value = !isChatVisible.value;
+    //   // チャットのアクティブユーザーではなくなったことをDBに伝える処理を追加する
+    //   router.push('/');
+    // };
 
     let activeUsers = ref([
       { id: 1, name: 'Julien' },

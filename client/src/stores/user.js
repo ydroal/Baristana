@@ -6,11 +6,14 @@ export const useUserStore = defineStore({
   state: () => ({
     // ログインユーザー情報を保持
     user: null,
+    chat_enabled: false, // 初期値をfalseに設定
+    redirectAfterLogin: null, // ログイン後にユーザーをリダイレクトするURL
     api: 'http://localhost:3000/api/'
   }),
   getters: {
     isLoggedIn: state => !!state.user, // ログイン状態を表す。!!でBooleanに変換
     getUser: state => state.user
+    // isChatEnabled: state => state.chat_enabled // 追加
   },
   actions: {
     isJwtTokenExists() {
@@ -35,14 +38,13 @@ export const useUserStore = defineStore({
           const response = await axios.get(`${this.api}auth/user`);
           this.user = response.data;
         } catch (error) {
-          this.user = null;  // ユーザー情報が取得できなかった場合にはnullを設定
+          this.user = null; // ユーザー情報が取得できなかった場合にはnullを設定
           console.error(error);
         }
       } else {
         console.log('JWTトークンが存在しないため、fetchUserは実行されません');
       }
     },
-
     logout() {
       axios
         .post(`${this.api}auth/logout`)
@@ -54,6 +56,35 @@ export const useUserStore = defineStore({
         .catch(error => {
           console.error(error);
         });
+    },
+    // async toggleChatEnabled() {
+    //   console.log('toggleChatEnabled called');
+    //   console.log(`User ID: ${this.user.id}`);
+    //   const newChatEnabled = !this.chat_enabled;
+    //   // APIを呼び出し、chat_enabledを更新
+    //   try {
+    //     await axios.put(`${this.api}active_user/${this.user.id}/chat_enabled`, { chat_enabled: newChatEnabled });
+    //     // Only if the API request is successful, update the chat_enabled in the state
+    //     this.chat_enabled = newChatEnabled;
+    //     console.log('Request successful');
+    //   } catch (error) {
+    //     console.error('Request failed', error);
+    //   }
+    // }
+    async toggleChatEnabled() {
+      console.log('toggleChatEnabled called');
+      console.log(`User ID: ${this.user.id}`);
+      // 想定している新しいchat_enabledの値
+      const newChatEnabled = !this.chat_enabled;
+      try {
+        // APIに新しいchat_enabledの値を送信
+        await axios.put(`${this.api}active_user/${this.user.id}/chat_enabled`, { chat_enabled: newChatEnabled });
+        // API通信が成功した場合にのみchat_enabledを更新
+        this.chat_enabled = newChatEnabled;
+        console.log('Request successful');
+      } catch (error) {
+        console.error('Request failed', error);
+      }
     }
   }
 });

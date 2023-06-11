@@ -38,7 +38,7 @@
       <VolumeSlider soundType="Cafe music" :audioSources="cafeMusic" />
       <VolumeSlider soundType="Barista sounds" :audioSources="baristaSounds" />
       <VolumeSlider soundType="People talking" :audioSources="peopleTalking" />
-      <ToggleButton />
+      <ToggleButton @toggle-chat="handleChatToggle" />
     </div>
   </div>
   <LoginModal :isOpen="isLoginModalOpen" @close="closeModal" />
@@ -51,6 +51,8 @@ import ToggleButton from '../components/ToggleButton.vue';
 import LoginModal from '../components/LoginModal.vue';
 import { useLoginModalStore } from '@/stores/loginModal';
 import { useBgmStore } from '@/stores/bgm';
+import { useUserStore } from '@/stores/user';
+import { useRouter } from 'vue-router';
 
 export default {
   components: {
@@ -61,6 +63,8 @@ export default {
   setup() {
     const loginModalStore = useLoginModalStore();
     const bgmStore = useBgmStore();
+    const userStore = useUserStore();
+    const router = useRouter(); // ルーティングのためのrouterインスタンスを取得
 
     // Vueのrefを作成
     const isLoginModalOpen = ref(loginModalStore.$state.isOpen);
@@ -86,6 +90,28 @@ export default {
       isAudioSourcesLoaded.value = true;
     });
 
+    const handleChatToggle = async isChatActive => {
+      console.log('index Page:handleChatToggle called with:', isChatActive);
+      //chatがオン
+      if (isChatActive) {
+        const isUserLoggedIn = userStore.isLoggedIn; // ログインステータスの確認
+        if (isUserLoggedIn) {
+          router.push('/chat'); // チャットページにリダイレクト
+          // ユーザーがログインしていれば、chat_enabled ステータスをトグル
+          await userStore.toggleChatEnabled();
+        } else {
+          userStore.redirectAfterLogin = '/chat'; // リダイレクト先を設定
+          loginModalStore.openModal(); // ログインモーダルを表示
+        }
+      } else { //chatボタンがオフになった場合
+        // ユーザーがログインしていれば、chat_enabled ステータスをトグル
+        if (userStore.isLoggedIn) {
+          await userStore.toggleChatEnabled();
+        }
+        router.push('/'); // チャットが非アクティブの場合、ホームにリダイレクト
+      }
+    };
+
     return {
       isLoginModalOpen,
       openLoginModal: loginModalStore.openModal,
@@ -94,7 +120,8 @@ export default {
       cafeMusic: computed(() => bgmStore.cafe_music),
       baristaSounds: computed(() => bgmStore.barista_sounds),
       peopleTalking: computed(() => bgmStore.people_talking),
-      isAudioSourcesLoaded
+      isAudioSourcesLoaded,
+      handleChatToggle
     };
   }
 };

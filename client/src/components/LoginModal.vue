@@ -108,7 +108,7 @@ export default {
       }
     },
     // Google Sign-Inからのレスポンスをハンドリング
-    handleCredentialResponse(response) {
+    async handleCredentialResponse(response) {
       const idToken = response.credential;
       console.log('ID Token: ' + idToken);
       console.log('Attempting to authenticate...');
@@ -116,7 +116,7 @@ export default {
       const userStore = useUserStore();
       axios
         .post('http://localhost:3000/api/auth/google/onetap', { idToken: idToken })
-        .then(res => {
+        .then(async (res) => { // <- 追加
           console.log('Received response from server', res);
           if (res.status === 200) {
             console.log('Authentication succeeded!');
@@ -126,9 +126,21 @@ export default {
               localStorage.setItem('jwt', res.data.token);
               console.log(localStorage.getItem('jwt'));
               // ユーザー情報を取得
-              userStore.fetchUser();
+              await userStore.fetchUser();
+
+              // ログイン成功後、リダイレクト先が /chat であれば、チャットを有効化
+              if (userStore.redirectAfterLogin === '/chat') {
+                await userStore.toggleChatEnabled(true);
+              }
+              this.$emit('close');
+              // モーダルが閉じた後に、redirectAfterLogin ステートの値に基づいてリダイレクト
+              if (userStore.redirectAfterLogin) {
+                this.$router.push(userStore.redirectAfterLogin);
+                userStore.redirectAfterLogin = null; // リダイレクトが完了したら値をリセット
+              } else {
+                this.$router.push('/'); // デフォルトのリダイレクト先
+              }
             }
-            this.$emit('close');
           }
         })
         .catch(error => {
