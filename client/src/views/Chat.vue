@@ -1,9 +1,6 @@
 <template>
   <div class="chat-page">
     <div class="volume-slider" v-if="isAudioSourcesLoaded">
-      <!-- <pre>{{ cafeMusic }}</pre>
-      <pre>{{ baristaSounds }}</pre>
-      <pre>{{ peopleTalking }}</pre> -->
       <VolumeSlider soundType="Cafe music" :audioSources="cafeMusic" />
       <VolumeSlider soundType="Barista sounds" :audioSources="baristaSounds" />
       <VolumeSlider soundType="People talking" :audioSources="peopleTalking" />
@@ -26,12 +23,13 @@
         <div
           v-for="(message, index) in messages"
           :key="index"
-          :class="message.user === currentUserId ? 'message-right' : 'message-left'"
+          :class="message.userId === currentUserId ? 'message-right' : 'message-left'"
         >
-          <img v-if="message.user !== currentUserId" :src="getUserById(message.user).icon" class="user-icon" />
+          <!-- <img v-if="message.userId !== currentUserId" :src="getUserById(message.userId).icon" class="user-icon" /> -->
+          <img v-if="message.userId !== currentUserId" :src="message.usericon || UserIcon2" class="user-icon" />
           <div class="user-contents">
-            <div v-if="message.user !== currentUserId" class="user-name">{{ getUserById(message.user).name }}</div>
-            <div class="message-text">{{ message.text }}</div>
+            <div v-if="message.userId !== currentUserId" class="user-name">{{ message.username }}</div>
+            <div class="message-text">{{ message.msg }}</div>
           </div>
         </div>
       </div>
@@ -39,7 +37,7 @@
       <!-- typing area -->
       <div class="typing-area">
         <textarea
-          v-model="message"
+          v-model="currentMessage"
           @keydown.enter.exact="sendMessage"
           placeholder="Type a message"
           rows="4"
@@ -48,7 +46,7 @@
         <div class="icon">
           <img :src="EmojiIcon" alt="EmojiIcon" class="emoji-icon" @click="showEmojiPicker = !showEmojiPicker" />
           <div v-if="showEmojiPicker" class="emoji-picker">
-            <EmojiPicker @emoji-click="addEmoji" />
+            <EmojiPicker @emoji_click="addEmoji" />
           </div>
           <input type="file" ref="fileInput" multiple class="file-input" @change="handleFileUpload" />
           <img :src="AttachIcon" alt="AttachIcon" class="attach-icon" @click="triggerFileInput" />
@@ -64,6 +62,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useBgmStore } from '@/stores/bgm';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
+import io from 'socket.io-client'; //Socket.IOクライアントをインポート
 import VolumeSlider from '../components/VolumeSlider.vue';
 import ToggleButton from '../components/ToggleButton.vue';
 import EmojiIcon from '@/assets/images/icon_emoji.svg';
@@ -87,16 +86,55 @@ export default {
     const cafeMusic = computed(() => bgmStore.cafe_music);
     const baristaSounds = computed(() => bgmStore.barista_sounds);
     const peopleTalking = computed(() => bgmStore.people_talking);
+    const currentUserId = computed(() => (userStore.getUser ? userStore.getUser.id : null));
+
+    const socket = io('http://localhost:3000');
+    // const currentUserId = ref(1);
+    let activeUsers = ref([
+      // { id: 1, name: 'Julien' },
+      // { id: 2, icon: UserIcon2, name: 'Issey' },
+      // { id: 3, name: 'Emma' },
+      // { id: 4, name: 'Yon' }
+    ]);
+    const messages = ref([
+      // { user: 1, text: 'Hello!' },
+      // {
+      //   user: 2,
+      //   text: 'Hi there! blablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablabla'
+      // },
+      // { user: 2, text: 'How are you?' },
+      // {
+      //   user: 1,
+      //   text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum'
+      // },
+      // {
+      //   user: 2,
+      //   text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pellentesque nec nam aliquam sem. Tempus egestas sed sed risus pretium quam. Odio tempor orci dapibus ultrices in iaculis nunc sed augue. Auctor eu augue ut lectus arcu bibendum at varius. Senectus et netus et malesuada fames ac turpis egestas sed.'
+      // },
+      // { user: 2, text: 'Hello!' }
+    ]);
+    // const message = ref('');
+    const currentMessage = ref('');
+    const showEmojiPicker = ref(false);
+    const fileInput = ref(null);
+
+    // chatのオンオフ
+    const isChatVisible = ref(true);
+    const router = useRouter();
 
     onMounted(async () => {
       // Promise.all の結果を await で待つように修正
       await Promise.all([bgmStore.fetchCafeMusic(), bgmStore.fetchBaristaSounds(), bgmStore.fetchPeopleTalking()]);
       // 音源データのフェッチが完了したらフラグをセット
       isAudioSourcesLoaded.value = true;
-      // console.log('Cafe music:', cafeMusic.value);
-      // console.log('Barista sounds:', baristaSounds.value);
-      // console.log('People talking:', peopleTalking.value);
+      // ユーザーIDをsocket.IOサーバーに送信
+      socket.emit('login', currentUserId.value);
     });
+
+    const disconnectChat = () => {
+      socket.disconnect(); // ここで'socket'はChat.vueで初期化されたsocket.ioのインスタンスを参照します。
+      messages.value = []; // メッセージをクリア
+    };
 
     // チャットがオンオフを制御する関数
     const handleChatToggle = async isChatActive => {
@@ -106,20 +144,17 @@ export default {
       }
 
       if (!isChatActive) {
+        disconnectChat(); // チャットが非アクティブになったとき、disconnectChatメソッドを呼び出します。
         router.push('/'); // チャットが非アクティブの場合、ホームにリダイレクト
       }
     };
 
-    // chatのオンオフ
-    const isChatVisible = ref(true);
-
-    const router = useRouter();
     const toggleChatDisplay = () => {
       isChatVisible.value = !isChatVisible.value;
       handleChatToggle(isChatVisible.value);
-      if (!isChatVisible.value) {
-        router.push('/');
-      }
+      // if (!isChatVisible.value) {
+      //   router.push('/');
+      // }
     };
     // const toggleChatDisplay = () => {
     //   isChatVisible.value = !isChatVisible.value;
@@ -127,60 +162,56 @@ export default {
     //   router.push('/');
     // };
 
-    let activeUsers = ref([
-      { id: 1, name: 'Julien' },
-      { id: 2, icon: UserIcon2, name: 'Issey' },
-      { id: 3, name: 'Emma' },
-      { id: 4, name: 'Yon' }
-    ]);
-
-    const currentUserId = ref(1);
-
-    let messages = ref([
-      { user: 1, text: 'Hello!' },
-      {
-        user: 2,
-        text: 'Hi there! blablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablabla'
-      },
-      { user: 2, text: 'How are you?' },
-      {
-        user: 1,
-        text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum'
-      },
-      {
-        user: 2,
-        text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pellentesque nec nam aliquam sem. Tempus egestas sed sed risus pretium quam. Odio tempor orci dapibus ultrices in iaculis nunc sed augue. Auctor eu augue ut lectus arcu bibendum at varius. Senectus et netus et malesuada fames ac turpis egestas sed.'
-      },
-      { user: 2, text: 'Hello!' }
-    ]);
-
     const displayedUsers = computed(() => {
       // composition apiではthisは使用しない。valueでアクセス
       return activeUsers.value.slice(0, 3);
     });
 
-    const message = ref('');
-    const showEmojiPicker = ref(false);
-
-    const addEmoji = (emoji) => {
-      message.value += emoji;
+    const addEmoji = emoji => {
+      console.log('addEmoji called');
+      console.log(emoji);
+      currentMessage.value += emoji;
       showEmojiPicker.value = false;
     };
 
-    const fileInput = ref(null);
-
+    // ファイル選択ダイアログを開くメソッド
     const triggerFileInput = () => {
       fileInput.value.click();
     };
 
-    const handleFileUpload = (event) => {
+    const handleFileUpload = event => {
       const file = event.target.files[0];
       console.log(file); // デバッグ用
-      // アップロードファイルの処理を書く
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        const arrayBuffer = reader.result;
+        socket.emit('upload', arrayBuffer, (status) => {
+          console.log(status); // サーバーからの応答を表示
+        });
+      };
+
+      reader.readAsArrayBuffer(file); // ファイルをArrayBufferとして読み込む
     };
 
-    const getUserById = (id) => {
-      return activeUsers.value.find(user => user.id === id);
+    // const getUserById = (id) => {
+    //   return activeUsers.value.find(user => user.id === id);
+    // };
+
+    // サーバーからのメッセージを待ち受けるリスナーを追加
+    socket.on('chat message', messageObj => {
+      // 受け取ったメッセージをmessagesに追加します
+      // messageObjは、メッセージテキスト、ユーザー名、ユーザーアイコンを含むオブジェクト
+      messages.value.push(messageObj);
+    });
+
+    // メッセージを送信するメソッドを定義
+    const sendMessage = () => {
+      // メッセージが空でなければ送信します
+      if (currentMessage.value.trim() !== '') {
+        socket.emit('chat message', currentMessage.value);
+        currentMessage.value = ''; // メッセージをクリアします
+      }
     };
 
     return {
@@ -194,77 +225,18 @@ export default {
       displayedUsers,
       EmojiIcon,
       AttachIcon,
-      message,
+      currentMessage,
       showEmojiPicker,
       UserIcon2,
       fileInput,
       addEmoji,
       triggerFileInput,
       handleFileUpload,
-      getUserById,
-      toggleChatDisplay
+      // getUserById,
+      toggleChatDisplay,
+      sendMessage
     };
   }
-  // オプションAPI
-  // data() {
-  //   return {
-  //     activeUsers: [
-  //       { id: 1, name: 'Julien' },
-  //       { id: 2, icon: UserIcon2, name: 'Issey' },
-  //       { id: 3, name: 'Emma' },
-  //       { id: 4, name: 'Yon' }
-  //     ],
-  //     currentUserId: 1,
-  //     messages: [
-  //       { user: 1, text: 'Hello!' },
-  //       {
-  //         user: 2,
-  //         text: 'Hi there! blablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablabla'
-  //       },
-  //       { user: 2, text: 'How are you?' },
-  //       {
-  //         user: 1,
-  //         text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum'
-  //       },
-  //       {
-  //         user: 2,
-  //         text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pellentesque nec nam aliquam sem. Tempus egestas sed sed risus pretium quam. Odio tempor orci dapibus ultrices in iaculis nunc sed augue. Auctor eu augue ut lectus arcu bibendum at varius. Senectus et netus et malesuada fames ac turpis egestas sed.'
-  //       },
-  //       { user: 2, text: 'Hello!' }
-  //     ],
-  //     EmojiIcon,
-  //     AttachIcon,
-  //     message: '',
-  //     showEmojiPicker: false,
-  //     UserIcon2
-  //   };
-  // },
-  // computed: {
-  //   displayedUsers() {
-  //     // Return only the first 3 active users
-  //     return this.activeUsers.slice(0, 3);
-  //   }
-  // },
-  // methods: {
-  //   // emojiは選択された絵文字
-  //   addEmoji(emoji) {
-  //     // 選択された絵文字を現在のメッセージに追加
-  //     this.message += emoji;
-  //     // 絵文字ピッカーを閉じる
-  //     this.showEmojiPicker = false;
-  //   },
-  //   triggerFileInput() {
-  //     this.$refs.fileInput.click();
-  //   },
-  //   handleFileUpload(event) {
-  //     const file = event.target.files[0];
-  //     console.log(file); // デバッグ用
-  //     // アップロードファイルの処理を書く
-  //   },
-  //   getUserById(id) {
-  //     return this.activeUsers.find(user => user.id === id);
-  //   }
-  // }
 };
 </script>
 

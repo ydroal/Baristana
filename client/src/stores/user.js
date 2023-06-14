@@ -37,6 +37,7 @@ export const useUserStore = defineStore({
         try {
           const response = await axios.get(`${this.api}auth/user`);
           this.user = response.data;
+          console.log('Received user data: ', response.data);
         } catch (error) {
           this.user = null; // ユーザー情報が取得できなかった場合にはnullを設定
           console.error(error);
@@ -84,10 +85,16 @@ export const useUserStore = defineStore({
         console.log('Request successful');
       } catch (error) {
         console.error('Request failed', error);
+        throw error;
       }
     }
   }
 });
 
-// Set axios defaults after the store definition
-axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('jwt')}`;
+// // Set axios defaults after the store definition
+// axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('jwt')}`;
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('jwt');
+  config.headers.Authorization = token ? `Bearer ${token}` : '';
+  return config;
+});

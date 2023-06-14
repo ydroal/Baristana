@@ -8,6 +8,11 @@ const passport = require('passport');
 const routes = require('./routes');
 require('dotenv').config();
 const cookieParser = require('cookie-parser');
+const http = require('http'); 
+const socketIo = require('socket.io');
+const connection = require('./db');
+// const fs = require('fs');  // file送信用に新しく追加
+// const path = require('path'); // file送信用に新しく追加
 
 
 // Expressモジュールを実体化して、定数appに代入
@@ -50,8 +55,71 @@ app.get('/', (req, res) => {
 // エンドポイントのマウント
 app.use('/api', routes);
 
+// ここでhttp.Serverのインスタンスを作成し、その上にsocket.ioをセットアップ
+const server = http.createServer(app); // HTTP serverを作成
+// Socket.IO serverをHTTP serverに接続。
+const io = socketIo(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true
+  }
+}); 
+// 全ての接続中のユーザーのユーザーIDを格納するためのオブジェクト
+const socketToUserId = {}; 
+
+// このインスタンス(io)はサーバーとしてlistenするオブジェクトとなる
+io.on('connection', (socket) => {
+  console.log('a user connected');
+  
+  // クライアントが初めて接続したときにloginイベントを発生させ、userIDを送信
+  socket.on('login', (userId) => {
+    socketToUserId[socket.id] = userId; // ユーザーIDをsocket.idと紐づけて保存
+  });
+
+  // メッセージを受け取るためのイベントリスナーを設定
+  socket.on('chat message', (msg) => {
+    const userId = socketToUserId[socket.id];
+    if (userId) {
+      // ここでデータベースにメッセージを保存します
+      const query = 'INSERT INTO chat_message (message, user_id, created_at) VALUES (?, ?, NOW())';
+      connection.query(query, [msg, userId], function(err, results, fields) {
+        if (err) throw err;
+        console.log('Message saved to database');
+        // ユーザー情報を取得
+        const userQuery = 'SELECT username, profile_picture_url FROM user WHERE id = ?';
+        connection.query(userQuery, [userId], function(err, results, fields) {
+          if (err) throw err;
+          const username = results[0].username;
+          const usericon = results[0].profile_picture_url;
+
+          // メッセージ、ユーザー名、ユーザーアイコンを含むオブジェクトを作成
+          const messageObj = {
+            msg: msg,
+            username: username,
+            usericon: usericon,
+            userId: userId 
+          };
+        
+          // メッセージをすべての接続しているクライアントにブロードキャスト
+          io.emit('chat message', messageObj);
+        });
+      });
+    } else {
+      console.error('Unknown user');
+    }
+  });
+
+  socket.on('disconnect', () => {
+    delete socketToUserId[socket.id];
+    console.log('user disconnected');
+  });
+});
+
 // 3000ポートでlisten
-app.listen(port, () => {
+// app.listen から server.listen への変更
+server.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);
 });
 
