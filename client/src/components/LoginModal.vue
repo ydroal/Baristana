@@ -116,7 +116,7 @@ export default {
       const userStore = useUserStore();
       axios
         .post('http://localhost:3000/api/auth/google/onetap', { idToken: idToken })
-        .then(async (res) => { // <- 追加
+        .then(async (res) => { // .then の中で await を使うには、そのthenの中の関数も非同期にする
           console.log('Received response from server', res);
           if (res.status === 200) {
             console.log('Authentication succeeded!');
@@ -132,6 +132,7 @@ export default {
               if (userStore.redirectAfterLogin === '/chat') {
                 await userStore.toggleChatEnabled(true);
               }
+              // 重要！！ここでモーダルを閉じる
               this.$emit('close');
               // モーダルが閉じた後に、redirectAfterLogin ステートの値に基づいてリダイレクト
               if (userStore.redirectAfterLogin) {
