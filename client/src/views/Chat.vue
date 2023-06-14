@@ -11,7 +11,7 @@
       <div class="active-users">
         <!-- Add active users -->
         <span v-for="(user, index) in displayedUsers" :key="user.id">
-          {{ user.name }}
+          {{ user.userName }}
           <span v-if="index < displayedUsers.length - 1">,&nbsp;</span>
         </span>
         <span v-if="activeUsers.length > 3">...</span>
@@ -90,28 +90,30 @@ export default {
 
     const socket = io('http://localhost:3000');
     // const currentUserId = ref(1);
+
+    // アクティブユーザーリストを保持するリアクティブ変数
     let activeUsers = ref([
-      // { id: 1, name: 'Julien' },
-      // { id: 2, icon: UserIcon2, name: 'Issey' },
-      // { id: 3, name: 'Emma' },
-      // { id: 4, name: 'Yon' }
+      // { userId: 1, userName: 'Julien' },
+      // { userId: 2, icon: UserIcon2, userName: 'Issey' },
+      // { userId: 3, userName: 'Emma' },
+      // { userId: 4, userName: 'Yon' }
     ]);
     const messages = ref([
-      // { user: 1, text: 'Hello!' },
+      // { userId: 1, msg: 'Hello!', username: Yoko, usericon: null },
       // {
-      //   user: 2,
-      //   text: 'Hi there! blablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablabla'
+      //   userId: 2,
+      //   msg: 'Hi there! blablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablabla', username: Issey, usericon: null
       // },
-      // { user: 2, text: 'How are you?' },
+      // { userId: 2, msg: 'How are you?' },
       // {
-      //   user: 1,
-      //   text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum'
+      //   userId: 1,
+      //   msg: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum', username: Yoko, usericon: null
       // },
       // {
-      //   user: 2,
-      //   text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pellentesque nec nam aliquam sem. Tempus egestas sed sed risus pretium quam. Odio tempor orci dapibus ultrices in iaculis nunc sed augue. Auctor eu augue ut lectus arcu bibendum at varius. Senectus et netus et malesuada fames ac turpis egestas sed.'
+      //   userId: 2,
+      //   msg: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pellentesque nec nam aliquam sem. Tempus egestas sed sed risus pretium quam. Odio tempor orci dapibus ultrices in iaculis nunc sed augue. Auctor eu augue ut lectus arcu bibendum at varius. Senectus et netus et malesuada fames ac turpis egestas sed.'
       // },
-      // { user: 2, text: 'Hello!' }
+      // { userId: 2, msg: 'Hello!' }
     ]);
     // const message = ref('');
     const currentMessage = ref('');
@@ -129,10 +131,17 @@ export default {
       isAudioSourcesLoaded.value = true;
       // ユーザーIDをsocket.IOサーバーに送信
       socket.emit('login', currentUserId.value);
+      // 'user joined'イベントをサーバに送信
+      socket.emit('user joined', currentUserId.value);
+    });
+
+    socket.on('active users update', updatedActiveUsers => {
+      // サーバから送られてきた最新のアクティブユーザーリストを取得
+      activeUsers.value = updatedActiveUsers;
     });
 
     const disconnectChat = () => {
-      socket.disconnect(); // ここで'socket'はChat.vueで初期化されたsocket.ioのインスタンスを参照します。
+      socket.disconnect(); // ここで'socket'はChat.vueで初期化されたsocket.ioのインスタンスを参照
       messages.value = []; // メッセージをクリア
     };
 
@@ -194,10 +203,6 @@ export default {
       reader.readAsArrayBuffer(file); // ファイルをArrayBufferとして読み込む
     };
 
-    // const getUserById = (id) => {
-    //   return activeUsers.value.find(user => user.id === id);
-    // };
-
     // サーバーからのメッセージを待ち受けるリスナーを追加
     socket.on('chat message', messageObj => {
       // 受け取ったメッセージをmessagesに追加します
@@ -232,7 +237,6 @@ export default {
       addEmoji,
       triggerFileInput,
       handleFileUpload,
-      // getUserById,
       toggleChatDisplay,
       sendMessage
     };
