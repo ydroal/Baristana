@@ -68,10 +68,37 @@ const io = socketIo(server, {
 }); 
 // 全ての接続中のユーザーのユーザーIDを格納するためのオブジェクト
 const socketToUserId = {}; 
+// アクティブなユーザー情報を保持する配列
+let activeUsers = [];
 
 // このインスタンス(io)はサーバーとしてlistenするオブジェクトとなる
 io.on('connection', (socket) => {
   console.log('a user connected');
+
+  // ユーザーが参加したとき
+  socket.on('user joined', (userId) => {
+    // ユーザー情報をデータベースから取得
+    console.log('user joined発火');
+    const userQuery = 'SELECT username FROM user WHERE id = ?';
+    connection.query(userQuery, [userId], function(err, results, fields) {
+      if (err) throw err;
+      if (results.length === 0) {
+        console.log('No user found with id', userId);
+        return;
+      }
+      const userName = results[0].username;
+      console.log(userName);
+      // そのユーザーがすでにactiveUsersリストに存在するかどうかを確認
+      const isUserActive = activeUsers.some(user => user.userId === userId);
+
+      // ユーザーがactiveUsersリストに存在しない場合、リストに追加
+      if (!isUserActive) {
+        activeUsers.push({userId, userName});
+        console.log('activeUser is created');
+        io.emit('active users update', activeUsers);
+      }
+    });
+  });
   
   // クライアントが初めて接続したときにloginイベントを発生させ、userIDを送信
   socket.on('login', (userId) => {
@@ -112,6 +139,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    // ユーザーが切断したときにactiveUsersリストから削除
+    activeUsers = activeUsers.filter(user => user.userId !== socketToUserId[socket.id]);
+
+    // ユーザーデータの更新を通知
+    io.emit('active users update', activeUsers);
+    
     delete socketToUserId[socket.id];
     console.log('user disconnected');
   });

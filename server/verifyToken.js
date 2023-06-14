@@ -11,7 +11,7 @@ const verifyToken = (req, res, next) => {
   if (!token) {
     return res.status(403).send({ message: 'No token provided!' });
   }
-  jwt.verify(token, secretKey, (err, user) => { // 'your-secret-key' は実際のJWT秘密鍵を使用
+  jwt.verify(token, secretKey, (err, user) => { // secretKeyは実際のJWT秘密鍵
     if (err) {
       return res.status(500).send({ message: 'Failed to authenticate token.' });
     }
