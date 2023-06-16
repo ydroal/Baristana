@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "aws-sdk": "^2.1398.0",
     "cookie-parser": "^1.4.6",
     "cookie-session": "^2.0.0",
     "cors": "^2.8.5",

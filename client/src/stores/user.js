@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
-import axios from 'axios';
+// import axios from 'axios';
+import axiosInstance from '@/axios';
 
 export const useUserStore = defineStore({
   id: 'user',
@@ -35,7 +36,7 @@ export const useUserStore = defineStore({
     async fetchUser() {
       if (this.isJwtTokenExists()) {
         try {
-          const response = await axios.get(`${this.api}auth/user`);
+          const response = await axiosInstance.get(`${this.api}auth/user`);
           this.user = response.data;
           console.log('Received user data: ', response.data);
         } catch (error) {
@@ -47,7 +48,7 @@ export const useUserStore = defineStore({
       }
     },
     logout() {
-      axios
+      axiosInstance
         .post(`${this.api}auth/logout`)
         .then(() => {
           this.user = null;
@@ -58,20 +59,7 @@ export const useUserStore = defineStore({
           console.error(error);
         });
     },
-    // async toggleChatEnabled() {
-    //   console.log('toggleChatEnabled called');
-    //   console.log(`User ID: ${this.user.id}`);
-    //   const newChatEnabled = !this.chat_enabled;
-    //   // APIを呼び出し、chat_enabledを更新
-    //   try {
-    //     await axios.put(`${this.api}active_user/${this.user.id}/chat_enabled`, { chat_enabled: newChatEnabled });
-    //     // Only if the API request is successful, update the chat_enabled in the state
-    //     this.chat_enabled = newChatEnabled;
-    //     console.log('Request successful');
-    //   } catch (error) {
-    //     console.error('Request failed', error);
-    //   }
-    // }
+
     async toggleChatEnabled() {
       console.log('toggleChatEnabled called');
       console.log(`User ID: ${this.user.id}`);
@@ -79,7 +67,7 @@ export const useUserStore = defineStore({
       const newChatEnabled = !this.chat_enabled;
       try {
         // APIに新しいchat_enabledの値を送信
-        await axios.put(`${this.api}active_user/${this.user.id}/chat_enabled`, { chat_enabled: newChatEnabled });
+        await axiosInstance.put(`${this.api}active_user/${this.user.id}/chat_enabled`, { chat_enabled: newChatEnabled });
         // API通信が成功した場合にのみchat_enabledを更新
         this.chat_enabled = newChatEnabled;
         console.log('Request successful');
@@ -91,10 +79,10 @@ export const useUserStore = defineStore({
   }
 });
 
-// // Set axios defaults after the store definition
+// Set axios defaults after the store definition
 // axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('jwt')}`;
-axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('jwt');
-  config.headers.Authorization = token ? `Bearer ${token}` : '';
-  return config;
-});
+// axiosInstance.interceptors.request.use((config) => {
+//   const token = localStorage.getItem('jwt');
+//   config.headers.Authorization = token ? `Bearer ${token}` : '';
+//   return config;
+// });
