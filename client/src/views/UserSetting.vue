@@ -2,44 +2,120 @@
   <div class="user-setting">
     <div class="user-setting_card">
       <div class="user-setting_icon">
-        <img :src="UserIcon2" alt="UserIcon" class="user_icon" />
+        <input id="file-input" type="file" @change="onFileChange" :disabled="!editMode" style="display: none" />
+        <label for="file-input">
+          <img :src="userInfo.profile_picture_url || UserIcon2" alt="UserIcon" class="user_icon" />
+        </label>
       </div>
       <h2 class="user-setting_title">My account</h2>
       <hr />
       <div class="user-setting_text">
         <p class="user-setting_text_title">User name</p>
         <p class="user-setting_text_sub">This will be displayed throughout this website</p>
-        <input class="user-setting_input" type="text" :disabled="!editMode" />
+        <input class="user-setting_input" type="text" :disabled="!editMode" v-model="userInfo.username" />
       </div>
       <div class="user-setting_text">
         <p class="user-setting_text_title">Email</p>
-        <input class="user-setting_input" type="text" :disabled="!editMode" />
+        <p class="user-setting_text_sub attention">Note: Display only. Registered email cannot be changed</p>
+        <input class="user-setting_input" type="text" disabled v-model="userInfo.email" />
       </div>
       <button @click="edit" class="user-setting_edit-button" v-if="!editMode">Edit</button>
-      <button @click="save" class="user-setting_edit-button" v-if="editMode">Update</button>
+      <button @click="update" class="user-setting_edit-button" v-if="editMode">Update</button>
     </div>
   </div>
 </template>
 
 <script>
+// import axios from 'axios';
+import axiosInstance from '@/axios';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useUserStore } from '@/stores/user';
 import UserIcon2 from '@/assets/images/icon_user2.svg';
 
 export default {
-  components: {},
-  data() {
-    return {
-      UserIcon2,
-      editMode: false
+  setup() {
+    const api = 'http://localhost:3000/api/';
+    const userStore = useUserStore();
+    const userId = computed(() => (userStore.getUser ? userStore.getUser.id : null));
+
+    let userInfo = ref({ username: '', email: '', profile_picture_url: '' });
+    let initialUserInfo = ref({ username: '', email: '', profile_picture_url: '' });
+    let editMode = ref(false); // 編集モードを管理するためのref
+    let selectedFile = ref(null); // 選択された画像ファイルを保持するための変数
+
+    onMounted(async () => {
+      console.log('userStore.getUser: ', userStore.getUser);
+      if (userStore.getUser) {
+        console.log('userStore.getUser.id: ', userStore.getUser.id);
+      }
+      try {
+        console.log('userId: ', userId.value);
+        const response = await axiosInstance.get(`${api}user/${userId.value}`);
+        userInfo.value = response.data[0];
+        initialUserInfo.value = { ...response.data[0] }; // ユーザー情報を初期状態として保存。要深いコピー
+        console.log('Received full user data: ', response.data);
+      } catch (error) {
+        userInfo.value = { username: '', email: '', profile_picture_url: '' }; // ユーザー情報が取得できなかった場合にはnullを設定
+        initialUserInfo.value = { username: '', email: '', profile_picture_url: '' }; // 初期状態も同様に設定
+        console.error(error);
+        console.error(error);
+      }
+    });
+
+    // 選択された画像のプレビューを表示
+    const onFileChange = e => {
+      selectedFile.value = e.target.files[0];
+      userInfo.value.profile_picture_url = URL.createObjectURL(selectedFile.value);
     };
-  },
-  setup() {},
-  methods: {
-    edit() {
-      this.editMode = true;
-    },
-    save() {
-      this.editMode = false;
-    }
+
+    const edit = () => {
+      editMode.value = true;
+    };
+
+    const update = async () => {
+      editMode.value = false;
+      if (userInfo.value.username !== initialUserInfo.value.username) {
+        // axiosのPUTは第二引数に渡すデータはオブジェクト形式
+        await axiosInstance.put(`${api}user/${userId.value}`, {
+          username: userInfo.value.username
+        });
+      }
+      // 選択された画像ファイルがあればサーバーに送信する
+      if (selectedFile.value) {
+        const formData = new FormData();
+        formData.append('icon', selectedFile.value);
+        await axiosInstance.post(`${api}user/${userId.value}/icon`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      }
+      // ユーザー情報の更新後、初期状態を再設定する
+      initialUserInfo.value = { ...userInfo.value };
+    };
+
+    // editModeの値が変わったときにファイル選択を有効/無効にする
+    watch(editMode, newValue => {
+      const fileInput = document.getElementById('file-input');
+      if (newValue) {
+        fileInput.removeAttribute('disabled');
+      } else {
+        fileInput.setAttribute('disabled', 'disabled');
+      }
+    });
+
+    return {
+      api,
+      userStore,
+      UserIcon2,
+      userId,
+      userInfo,
+      editMode,
+      selectedFile,
+      edit,
+      update,
+      onFileChange
+    };
   }
 };
 </script>
@@ -111,6 +187,10 @@ hr {
   color: #efece0;
   margin-top: 0.3rem;
   margin-left: 0.3rem;
+}
+.attention {
+  color: #37604b;
+  font-weight: 400;
 }
 
 .user-setting_input {

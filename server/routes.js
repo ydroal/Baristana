@@ -139,7 +139,7 @@ router.post('/auth/google/onetap', async (req, res) => {
       idToken,
       audience: CLIENT_ID,
     });
-    // 他にもpayloadには、ユーザーの名前やメールアドレスなどが含まれます
+    // payloadには、ユーザーの名前やメールアドレスなどが含まれる
     const payload = ticket.getPayload();
     const googleId = payload['sub'];
     const username = payload['name'];
@@ -223,7 +223,7 @@ async function getUserId(googleId) {
 
 router.get('/auth/user', verifyToken, (req, res) => {
   if (req.user) { // ユーザーがログインしている場合
-    res.json(req.user); // ログインユーザーの情報を返す
+    res.json(req.user); // ログインユーザーの情報(userIDのみ)を返す
   } else { // ユーザーがログインしていない場合
     res.status(401).json({ message: 'No user is logged in' }); // エラーメッセージを返す
   }
@@ -259,14 +259,41 @@ router.put('/active_user/:id/chat_enabled', verifyToken, (req, res) => {
   const userId = req.params.id;  // データベースのユーザーIDを取得
   const chatEnabled = req.body.chat_enabled;
 
-  // userIdが存在するか確認は省略。存在しない場合はUPDATE文が何も影響を与えず、エラーは発生しないからです。
+  // userIdが存在するか確認は省略。存在しない場合はUPDATE文が何も影響を与えず、エラーは発生しない。
   const sql = 'UPDATE active_user SET chat_enabled = ? WHERE user_id = ?';
   connection.query(sql, [chatEnabled, userId], (err, results) => {
     if (err) {
-      console.log(err);  // エラーを出力
+      console.log(err);
       return res.status(500).send({message: 'Database update failed.'});
     }
     res.send({message: 'Chat status updated successfully.'});
+  });
+});
+
+// ユーザー情報取得(user-settingページ用）エンドポイント
+router.get('/user/:id', verifyToken, async (req, res) => {
+  try {
+    const query = `SELECT username, email, profile_picture_url FROM user WHERE id = ?`;
+    connection.query(query, [req.params.id], (err, results) => {
+      if (err) {
+        console.log(err); 
+        return res.status(500).json({ message: 'Error in Fetching user' });
+      }
+      res.json(results);
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'Server error' }); 
+  }
+});
+
+// ユーザー情報更新エンドポイント
+router.put('/user/:userId', (req, res) => {
+  const query = `UPDATE user SET username = ?, profile_picture_url = ? WHERE id = ?`;
+  let params = [req.body.username, req.body.profile_picture_url, req.params.userId];
+  connection.query(query, params, (err, result) => {
+    if (err) throw err;
+    res.send('User updated successfully');
   });
 });
 

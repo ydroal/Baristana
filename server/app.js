@@ -61,7 +61,7 @@ const server = http.createServer(app); // HTTP serverを作成
 const io = socketIo(server, {
   cors: {
     origin: "http://localhost:5173",
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true
   }
@@ -109,7 +109,7 @@ io.on('connection', (socket) => {
   socket.on('chat message', (msg) => {
     const userId = socketToUserId[socket.id];
     if (userId) {
-      // ここでデータベースにメッセージを保存します
+      // ここでデータベースにメッセージを保存
       const query = 'INSERT INTO chat_message (message, user_id, created_at) VALUES (?, ?, NOW())';
       connection.query(query, [msg, userId], function(err, results, fields) {
         if (err) throw err;

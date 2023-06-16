@@ -25,7 +25,6 @@
           :key="index"
           :class="message.userId === currentUserId ? 'message-right' : 'message-left'"
         >
-          <!-- <img v-if="message.userId !== currentUserId" :src="getUserById(message.userId).icon" class="user-icon" /> -->
           <img v-if="message.userId !== currentUserId" :src="message.usericon || UserIcon2" class="user-icon" />
           <div class="user-contents">
             <div v-if="message.userId !== currentUserId" class="user-name">{{ message.username }}</div>
@@ -115,7 +114,6 @@ export default {
       // },
       // { userId: 2, msg: 'Hello!' }
     ]);
-    // const message = ref('');
     const currentMessage = ref('');
     const showEmojiPicker = ref(false);
     const fileInput = ref(null);
