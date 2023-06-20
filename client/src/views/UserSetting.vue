@@ -3,7 +3,11 @@
     <div class="user-setting_card">
       <div class="user-setting_icon">
         <input id="file-input" type="file" @change="onFileChange" :disabled="!editMode" style="display: none" />
-        <label for="file-input">
+        <div class="preview-image" v-if="editMode && selectedFile">
+          <img :src="previewImageUrl || userInfo.profile_picture_url || UserIcon2" alt="Preview" class="preview-icon" />
+        </div>
+        <!-- <label for="file-input"> -->
+        <label for="file-input" v-if="!selectedFile || !editMode">
           <img :src="userInfo.profile_picture_url || UserIcon2" alt="UserIcon" class="user_icon" />
         </label>
       </div>
@@ -12,15 +16,18 @@
       <div class="user-setting_text">
         <p class="user-setting_text_title">User name</p>
         <p class="user-setting_text_sub">This will be displayed throughout this website</p>
-        <input class="user-setting_input" type="text" :disabled="!editMode" v-model="userInfo.username" />
+        <input class="user-setting_input" type="text" :disabled="!editMode" v-if="userInfo" v-model="userInfo.username" />
       </div>
       <div class="user-setting_text">
         <p class="user-setting_text_title">Email</p>
         <p class="user-setting_text_sub attention">Note: Display only. Registered email cannot be changed</p>
         <input class="user-setting_input" type="text" disabled v-model="userInfo.email" />
       </div>
-      <button @click="edit" class="user-setting_edit-button" v-if="!editMode">Edit</button>
-      <button @click="update" class="user-setting_edit-button" v-if="editMode">Update</button>
+      <div class="buttons">
+        <button @click="edit" class="user-setting_edit-button" v-if="!editMode">Edit</button>
+        <button @click="update" class="user-setting_edit-button" v-if="editMode">Update</button>
+        <button @click="cancelEdit" class="user-setting_cancel-button" v-if="editMode">Cancel</button>
+      </div>
     </div>
   </div>
 </template>
@@ -42,6 +49,7 @@ export default {
     let initialUserInfo = ref({ username: '', email: '', profile_picture_url: '' });
     let editMode = ref(false); // 編集モードを管理するためのref
     let selectedFile = ref(null); // 選択された画像ファイルを保持するための変数
+    let previewImageUrl = ref(null);
 
     onMounted(async () => {
       console.log('userStore.getUser: ', userStore.getUser);
@@ -65,7 +73,14 @@ export default {
     // 選択された画像のプレビューを表示
     const onFileChange = e => {
       selectedFile.value = e.target.files[0];
-      userInfo.value.profile_picture_url = URL.createObjectURL(selectedFile.value);
+      previewImageUrl.value = URL.createObjectURL(selectedFile.value);
+    };
+
+    const cancelEdit = () => {
+      editMode.value = false;
+      userInfo.value = { ...initialUserInfo.value }; // 初期状態に戻す
+      selectedFile.value = null;
+      previewImageUrl.value = null;
     };
 
     const edit = () => {
@@ -82,11 +97,15 @@ export default {
       }
       // 選択された画像ファイルがあればサーバーに送信する
       if (selectedFile.value) {
+        // userInfo.value.profile_picture_url = previewImageUrl.value; //追加
         const formData = new FormData();
         formData.append('icon', selectedFile.value);
-        await axiosInstance.post(`${api}user/${userId.value}/icon`, formData, {
+        formData.append('file-name', previewImageUrl.value); //追加
+        await axiosInstance.put(`${api}user/${userId.value}/icon`, formData, {
           headers: {
+            // 画像をポストする場合の通信形式は multipart/form-data
             'Content-Type': 'multipart/form-data'
+            // 'X-HTTP-Method-Override': 'PUT', // PUTに置き換える記述を書く
           }
         });
       }
@@ -112,6 +131,8 @@ export default {
       userInfo,
       editMode,
       selectedFile,
+      previewImageUrl,
+      cancelEdit,
       edit,
       update,
       onFileChange
@@ -149,13 +170,19 @@ export default {
   left: calc(50% - 62px); /* 左辺を親要素の左辺から中央（50%）に配置、さらに62px左にオフセット */
   overflow: hidden;
 }
-.user_icon {
+.user_icon,
+.preview-icon {
   position: absolute;
   top: 50%;
   left: 50%;
   width: 80%;
   transform: translate(-50%, -50%);
 }
+
+.preview-icon {
+  width: 100%;
+}
+
 .user-setting_title {
   align-self: flex-start;
   margin-top: 4rem;
@@ -209,7 +236,14 @@ hr {
   outline: none;
   border: 4px solid #fff;
 }
-.user-setting_edit-button {
+.buttons {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.user-setting_edit-button,
+.user-setting_cancel-button {
   background-color: #232121;
   width: 86px;
   color: #efece0;
@@ -217,7 +251,7 @@ hr {
   padding: 10px 12px 10px 12px;
   border-radius: 60px;
   border-style: none;
-  margin: auto 1.3rem 1.3rem auto;
+  margin: 2rem 1.3rem 1.3rem 0;
   font-size: 0.9rem;
   align-self: flex-end;
 }

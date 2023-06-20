@@ -79,8 +79,10 @@ export const useUserStore = defineStore({
   }
 });
 
-// Set axios defaults after the store definition
+// Set axios defaults-> axios.jsでaxiosをインスタンス化して設定。axiosを使用するファイルでaxiosInstanceをインポートして使う
+
 // axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('jwt')}`;
+
 // axiosInstance.interceptors.request.use((config) => {
 //   const token = localStorage.getItem('jwt');
 //   config.headers.Authorization = token ? `Bearer ${token}` : '';
