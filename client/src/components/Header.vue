@@ -54,6 +54,7 @@ export default {
     }
     function logout() {
       userStore.logout();
+      router.push('/');
     }
     function goToUserSetting() {
       router.push('/user-setting');

@@ -7,7 +7,7 @@ import { createPinia } from 'pinia';
 
 import App from './App.vue';
 import router from './router';
-import axios from 'axios';
+// import axios from 'axios';
 // import GAuth from 'vue-google-oauth2';
 // import GAuth from 'vue3-google-oauth2';
 
@@ -20,7 +20,7 @@ const app = createApp(App);
 //   prompt: 'select_account'
 // };
 
-app.use(createPinia());
+app.use(createPinia()); //Piniaを生成してアプリで読み込む
 app.use(router);
 // app.use(GAuth, gAuthOptions);
 app.mount('#app');
