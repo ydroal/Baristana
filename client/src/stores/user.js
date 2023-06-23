@@ -9,7 +9,7 @@ export const useUserStore = defineStore({
     user: null,
     chat_enabled: false, // 初期値をfalseに設定
     redirectAfterLogin: null, // ログイン後にユーザーをリダイレクトするURL
-    api: 'http://localhost:3000/api/'
+    api: import.meta.env.VITE_APP_API_ENDPOINT
   }),
   getters: {
     isLoggedIn: state => !!state.user, // ログイン状態を表す。!!でBooleanに変換
