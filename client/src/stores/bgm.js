@@ -10,7 +10,7 @@ export const useBgmStore = defineStore({
     cafe_music: [],
     barista_sounds: [],
     people_talking: [],
-    api: 'http://localhost:3000/api/bgm/'
+    api: `${import.meta.env.VITE_APP_API_ENDPOINT}bgm/`
   }),
   actions: {
     async fetchCafeMusic() {

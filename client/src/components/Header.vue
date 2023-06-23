@@ -1,10 +1,11 @@
 <template>
   <header class="header">
-    <router-link to="/"><img :src="Logo" alt="Logo" class="logo" /></router-link>
+    <router-link :to="redirectTo"><img :src="logo" alt="Logo" class="logo" /></router-link>
+    <!-- <router-link to="/"><img :src="Logo" alt="Logo" class="logo" /></router-link> -->
     <div class="right">
       <button v-if="!isLoggedIn" @click="login" class="login-button">Log in</button>
       <div v-else class="user_info">
-        <img :src="UserIcon" alt="UserIcon" class="user_icon" @click="goToUserSetting" />
+        <img :src="userIcon" alt="UserIcon" class="user_icon" @click="goToUserSetting" />
         <button @click="logout" class="logout-button">Log out</button>
       </div>
     </div>
@@ -12,7 +13,7 @@
 </template>
 
 <script>
-import { watch, computed } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useLoginModalStore } from '@/stores/loginModal';
 import { useUserStore } from '@/stores/user';
 import { useRouter } from 'vue-router';
@@ -21,16 +22,21 @@ import UserIcon from '@/assets/images/icon_user.svg';
 
 export default {
   components: {},
-  data() {
-    return {
-      Logo,
-      UserIcon
-    };
-  },
+  // data() {
+  //   return {
+  //     Logo,
+  //     UserIcon
+  //   };
+  // },
   setup() {
+    const logo = ref(Logo);
+    const userIcon = ref(UserIcon);
     const loginModalStore = useLoginModalStore();
     const userStore = useUserStore();
     const router = useRouter();
+
+    // chat_enabledの状態に基づいて適切なページへ遷移
+    const redirectTo = computed(() => (userStore.chat_enabled ? '/chat' : '/'));
 
     // userStore.isLoggedInの変化を監視
     watch(
@@ -53,16 +59,14 @@ export default {
       router.push('/user-setting');
     }
     return {
+      logo,
+      userIcon,
       login,
       logout,
       goToUserSetting,
+      redirectTo,
       isLoggedIn: computed(() => userStore.isLoggedIn)
     };
-  },
-  methods: {
-    navigateToUserSettings() {
-      // ユーザー設定ページへのリダイレクト処理を記述する
-    }
   }
 };
 </script>

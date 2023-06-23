@@ -12,6 +12,11 @@ const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 // verifyToken ミドルウェアのインポート
 const verifyToken = require('./verifyToken');
+// インストールしたaws-sdkを読み込み(v3)
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+// multipart/form-data 形式のリクエストを扱う
+const multer = require('multer');
+// v2インポート：const AWS = require('aws-sdk');
 require('dotenv').config();
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -21,6 +26,33 @@ const secretKey = process.env.JWT_SECRET;
 router.get('/', (req, res) => {
   res.send('Hello from API');
 });
+
+// v3のコード
+const s3 = new S3Client({
+  region: process.env.S3_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+//v2のコード（AWSの認証情報を設定）
+// const s3 = new AWS.S3();
+// AWS.config.update({
+//   accessKeyId: process.env.AWS_ACCESS_KEY,
+//   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+//   region: process.env.S3_REGION
+// });
+
+//AWS認証情報が設定できてるか確認(v3ではこのメソッドはない)
+// s3.config.getCredentials(function(err) {
+//   if (err) {
+//     console.log("AWS接続Error");
+//   }else {
+//     console.log("AWS接続Success");
+//   }
+// });
+
 
 // セッションにユーザー情報を保存
 // passport.serializeUser((user, done) => {
@@ -103,17 +135,6 @@ router.get('/bgm/:category', (req, res) => {
   });
 });
 
-router.post('/chat/messages', (req, res) => {
-  // Sends a chat message and stores it in the database
-});
-
-router.post('/auth/login', (req, res) => {
-  // Authenticate the user by their login information
-});
-
-router.get('/chat/active_users', (req, res) => {
-  // GET: Obtain the current active user (logged-in user) count
-});
 
 // ユーザーをGoogleのログインページにリダイレクトする（不要）
 // router.get('/auth/google', passport.authenticate('google', {
@@ -151,9 +172,9 @@ router.post('/auth/google/onetap', async (req, res) => {
     const query = `
     INSERT INTO user (google_id, username, email, created_at, access_token, refresh_token) 
     VALUES (?, ?, ?, NOW(), ?, ?)
-    ON DUPLICATE KEY UPDATE username = ?, email = ?, access_token = ?, refresh_token = ?;
+    ON DUPLICATE KEY UPDATE email = ?, access_token = ?, refresh_token = ?;
     `;
-    const params = [googleId, username, email, accessToken, refreshToken, username, email, accessToken, refreshToken];
+    const params = [googleId, username, email, accessToken, refreshToken, email, accessToken, refreshToken];
 
     // connection.queryをPromiseでラップする
     await new Promise((resolve, reject) => {
@@ -287,14 +308,67 @@ router.get('/user/:id', verifyToken, async (req, res) => {
   }
 });
 
-// ユーザー情報更新エンドポイント
+// icon画像ファイルをメモリに一時保存
+const upload = multer({ storage: multer.memoryStorage() });
+
+// S3にアップロード
+const uploadFile = async (req) => {
+  const command = new PutObjectCommand({
+    Bucket: process.env.BUCKET_NAME,
+    Key: `${process.env.S3_OBJ_ICONS}/${req.body.profile_picture_url}`, //(ファイル名)階層構造を使用するためのスラッシュ/も使える
+    Body: req.file.buffer, //Bufferはmulterで追加されたプロパティ。Node.jsがバイナリデータを扱うためのデータ型
+  });
+
+  try {
+    const response = await s3.send(command);
+    console.log(response);
+    console.log('uploaded to s3!');
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+// ユーザー情報ユーザーアイコン更新エンドポイント(画像ファイルアップロード用にmulterのuploadメソッドを適用)
+router.put('/user/:userId/icon', upload.single('icon'), async (req, res) => {
+  // iconがあれば、uploadメソッドでreq.fileに格納されている
+  if (req.file) {
+    await uploadFile(req);
+  }
+  const query = `UPDATE user SET profile_picture_url = ? WHERE id = ?`;
+  let params = [req.body.profile_picture_url, req.params.userId];
+  connection.query(query, params, (err, result) => {
+    if (err) {
+      res.status(500).send('An error occurred while updating the profile_picture_url');
+    } else {
+      const s3_bucket_name = process.env.BUCKET_NAME;
+      const s3_region = process.env.S3_REGION;
+      const obj_key = `${process.env.S3_OBJ_ICONS}/${req.body.profile_picture_url}`;
+      const updated_profile_picture_url = `https://${s3_bucket_name}.s3.${s3_region}.amazonaws.com/${obj_key}`;
+      res.json({ updated_profile_picture_url });
+      };
+    })
+});
+
+// ユーザー情報username更新エンドポイント
 router.put('/user/:userId', (req, res) => {
-  const query = `UPDATE user SET username = ?, profile_picture_url = ? WHERE id = ?`;
-  let params = [req.body.username, req.body.profile_picture_url, req.params.userId];
+  const query = `UPDATE user SET username = ? WHERE id = ?`;
+  let params = [req.body.username, req.params.userId];
   connection.query(query, params, (err, result) => {
     if (err) throw err;
-    res.send('User updated successfully');
+    res.send('User name updated 成功');
   });
 });
+// router.put('/user/:userId', upload.single('icon'), (req, res) => {
+//   // iconがあれば、uploadメソッドでreq.fileに格納されている
+//   if (req.file) {
+//     uploadFile(req);
+//   }
+//   const query = `UPDATE user SET username = ?, profile_picture_url = ? WHERE id = ?`;
+//   let params = [req.body.username, req.body.profile_picture_url, req.params.userId];
+//   connection.query(query, params, (err, result) => {
+//     if (err) throw err;
+//     res.send('User updated 成功');
+//   });
+// });
 
 module.exports = router;
