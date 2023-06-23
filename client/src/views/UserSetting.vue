@@ -16,7 +16,13 @@
       <div class="user-setting_text">
         <p class="user-setting_text_title">User name</p>
         <p class="user-setting_text_sub">This will be displayed throughout this website</p>
-        <input class="user-setting_input" type="text" :disabled="!editMode" v-if="userInfo" v-model="userInfo.username" />
+        <input
+          class="user-setting_input"
+          type="text"
+          :disabled="!editMode"
+          v-if="userInfo"
+          v-model="userInfo.username"
+        />
       </div>
       <div class="user-setting_text">
         <p class="user-setting_text_title">Email</p>
@@ -41,7 +47,7 @@ import UserIcon2 from '@/assets/images/icon_user2.svg';
 
 export default {
   setup() {
-    const api = 'http://localhost:3000/api/';
+    const api = import.meta.env.VITE_APP_API_ENDPOINT;
     const userStore = useUserStore();
     const userId = computed(() => (userStore.getUser ? userStore.getUser.id : null));
 
@@ -61,6 +67,13 @@ export default {
         const response = await axiosInstance.get(`${api}user/${userId.value}`);
         userInfo.value = response.data[0];
         initialUserInfo.value = { ...response.data[0] }; // ユーザー情報を初期状態として保存。要深いコピー
+
+        if (userInfo.value.profile_picture_url) {
+          const s3_bucket_name = import.meta.env.VITE_APP_BUCKET_NAME;
+          const s3_region = import.meta.env.VITE_APP_S3_REGION;
+          const obj_key = `${import.meta.env.VITE_APP_S3_OBJ_ICONS}/${userInfo.value.profile_picture_url}`;
+          userInfo.value.profile_picture_url = `https://${s3_bucket_name}.s3.${s3_region}.amazonaws.com/${obj_key}`;
+        }
         console.log('Received full user data: ', response.data);
       } catch (error) {
         userInfo.value = { username: '', email: '', profile_picture_url: '' }; // ユーザー情報が取得できなかった場合にはnullを設定
@@ -73,7 +86,7 @@ export default {
     // 選択された画像のプレビューを表示
     const onFileChange = e => {
       selectedFile.value = e.target.files[0];
-      previewImageUrl.value = URL.createObjectURL(selectedFile.value);
+      previewImageUrl.value = URL.createObjectURL(selectedFile.value); //オブジェクトURLを作成
     };
 
     const cancelEdit = () => {
@@ -97,17 +110,20 @@ export default {
       }
       // 選択された画像ファイルがあればサーバーに送信する
       if (selectedFile.value) {
-        // userInfo.value.profile_picture_url = previewImageUrl.value; //追加
+        let updateFileUrl = `${userId.value}-${Date.now()}-${selectedFile.value.name}`;
+        console.log(updateFileUrl);
         const formData = new FormData();
         formData.append('icon', selectedFile.value);
-        formData.append('file-name', previewImageUrl.value); //追加
-        await axiosInstance.put(`${api}user/${userId.value}/icon`, formData, {
+        formData.append('profile_picture_url', updateFileUrl);
+        const response = await axiosInstance.put(`${api}user/${userId.value}/icon`, formData, {
           headers: {
             // 画像をポストする場合の通信形式は multipart/form-data
             'Content-Type': 'multipart/form-data'
             // 'X-HTTP-Method-Override': 'PUT', // PUTに置き換える記述を書く
           }
         });
+        // レスポンスから新しい画像のURLを取得して、userInfoのデータを更新する
+        userInfo.value.profile_picture_url = response.data.updated_profile_picture_url;
       }
       // ユーザー情報の更新後、初期状態を再設定する
       initialUserInfo.value = { ...userInfo.value };
@@ -175,12 +191,8 @@ export default {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 80%;
-  transform: translate(-50%, -50%);
-}
-
-.preview-icon {
   width: 100%;
+  transform: translate(-50%, -50%);
 }
 
 .user-setting_title {

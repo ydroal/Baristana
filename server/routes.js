@@ -54,7 +54,6 @@ const s3 = new S3Client({
 // });
 
 
-
 // セッションにユーザー情報を保存
 // passport.serializeUser((user, done) => {
 //   done(null, user.id);
@@ -330,17 +329,24 @@ const uploadFile = async (req) => {
 };
 
 // ユーザー情報ユーザーアイコン更新エンドポイント(画像ファイルアップロード用にmulterのuploadメソッドを適用)
-router.put('/user/:userId/icon', upload.single('icon'), (req, res) => {
+router.put('/user/:userId/icon', upload.single('icon'), async (req, res) => {
   // iconがあれば、uploadメソッドでreq.fileに格納されている
   if (req.file) {
-    uploadFile(req);
+    await uploadFile(req);
   }
   const query = `UPDATE user SET profile_picture_url = ? WHERE id = ?`;
   let params = [req.body.profile_picture_url, req.params.userId];
   connection.query(query, params, (err, result) => {
-    if (err) throw err;
-    res.send('User icon updated 成功');
-  });
+    if (err) {
+      res.status(500).send('An error occurred while updating the profile_picture_url');
+    } else {
+      const s3_bucket_name = process.env.BUCKET_NAME;
+      const s3_region = process.env.S3_REGION;
+      const obj_key = `${process.env.S3_OBJ_ICONS}/${req.body.profile_picture_url}`;
+      const updated_profile_picture_url = `https://${s3_bucket_name}.s3.${s3_region}.amazonaws.com/${obj_key}`;
+      res.json({ updated_profile_picture_url });
+      };
+    })
 });
 
 // ユーザー情報username更新エンドポイント
