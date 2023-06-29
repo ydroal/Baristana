@@ -114,4 +114,19 @@ export default {
   transform: translate(-50%, 50%) rotate(45deg);
   background: white;
 }
+@media (max-width: 575.98px), (max-height: 418px) {
+  .emoji_picker {
+    width: 16rem;
+    height: 16rem;
+    max-width: 100%;
+  }
+  .category button {
+    margin: 0.5rem;
+    margin-left: 0;
+    background: inherit;
+    border: none;
+    font-size: 1.5rem;
+    padding: 0;
+  }
+}
 </style>

@@ -85,23 +85,86 @@ export default {
   align-items: center;
 }
 .logo {
-  width: 220px;
+  /* width: 26.5%; */
+  width: 218px;
   height: auto;
   margin-left: 1.5%;
 }
 .user_icon {
   height: 45px;
+  margin-bottom: 0.3rem;
 }
 .login-button,
 .logout-button {
   background-color: #232121;
-  width: 86px;
+  width: 5rem;
   color: #efece0;
   font-weight: 300;
   padding: 10px 12px 10px 12px;
   border-radius: 60px;
   border-style: none;
-  margin: 1rem 2rem 1rem 1rem;
+  margin: 0 2rem 0.3rem 1rem;
   font-size: 0.9rem;
+}
+
+/* Medium devices (landscape phones, 576px and up) */
+@media (min-width: 576px) and (max-width: 767.98px) {
+  .logo {
+    width: 180px;
+    margin-left: 1.2%;
+  }
+  .login-button,
+  .logout-button {
+    width: 4.4rem;
+    font-size: 0.8rem;
+    padding: 8px 10px 8px 10px;
+    margin: 0 1rem 0.3rem 0.7rem;
+  }
+  .user_icon {
+    height: 38px;
+    margin-bottom: 0.3rem;
+  }
+}
+@media (min-width: 576px) and (max-width: 767.98px) and (orientation: landscape), (max-height: 418px) {
+  .header {
+    margin-bottom: 0.6%;
+  }
+  .logo {
+    width: 150px;
+    margin-left: 0;
+  }
+  .login-button,
+  .logout-button {
+    width: 3.7rem;
+    padding: 8px 10px 8px 10px;
+    font-size: 0.7rem;
+    margin: 0 0.5rem 0.5rem 0.5rem;
+  }
+  .user_icon {
+    height: 34px;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Small devices (portrait phones, less than 576px) */
+@media (max-width: 575.98px) {
+  .header {
+    margin: 1% 1% 2% 1%;
+  }
+  .logo {
+    width: 150px;
+    margin-left: 0;
+  }
+  .login-button,
+  .logout-button {
+    width: 3.7rem;
+    padding: 8px 10px 8px 10px;
+    font-size: 0.7rem;
+    margin: 0 0.5rem 0.5rem 0.5rem;
+  }
+  .user_icon {
+    height: 34px;
+    margin-bottom: 0.5rem;
+  }
 }
 </style>

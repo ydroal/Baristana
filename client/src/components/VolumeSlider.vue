@@ -135,4 +135,33 @@ input[type='range']::-moz-range-thumb {
   width: 300px;
   margin-left: 12px;
 }
+@media (min-width: 576px) and (max-width: 767.98px) and (orientation: landscape), (max-height: 418px) {
+  .slider {
+    width: 200px;
+    margin-bottom: 1rem;
+  }
+  .volume-control {
+    margin-top: 0.4rem;
+    margin-bottom: 0;
+  }
+  .volume-icon {
+    height: 1.6rem;
+    margin-bottom: 0.9rem;
+    text-align: left;
+  }
+  .volume-label {
+    font-size: 0.7rem;
+  }
+}
+/* Small devices (portrait phones, less than 576px) */
+@media (max-width: 575.98px) {
+  .slider {
+    width: 200px;
+  }
+}
+@media (min-width: 768px) and (max-width: 980px) and (max-height: 849.98px) {
+  .slider {
+    width: 200px;
+  }
+}
 </style>
