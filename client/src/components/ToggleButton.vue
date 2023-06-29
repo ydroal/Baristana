@@ -92,4 +92,76 @@ export default {
 .toggle_btn input {
   display: none;
 }
+@media (min-width: 576px) and (max-width: 767.98px) {
+  .toggle_btn {
+    width: 49.5px;
+    height: 27px;
+    border-radius: 27px;
+  }
+
+  .toggle_btn:has(:checked) {
+    background-color: #dfaf6f;
+  }
+
+  .toggle_btn::after {
+    position: absolute;
+    width: 27px;
+    height: 27px;
+  }
+
+  .toggle_btn:has(:checked)::after {
+    left: 27px;
+  }
+}
+@media (min-width: 576px) and (max-width: 767.98px) and (orientation: landscape), (max-height: 418px) {
+  .btn_label {
+    margin-right: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+  .chatting_btn {
+    margin-top: 0.4rem;
+  }
+  .toggle_btn {
+    width: 49.5px;
+    height: 27px;
+    border-radius: 27px;
+  }
+
+  .toggle_btn:has(:checked) {
+    background-color: #dfaf6f;
+  }
+
+  .toggle_btn::after {
+    position: absolute;
+    width: 27px;
+    height: 27px;
+  }
+
+  .toggle_btn:has(:checked)::after {
+    left: 27px;
+  }
+}
+/* Small devices (portrait phones, less than 576px) */
+@media (max-width: 575.98px) {
+  .toggle_btn {
+    width: 49.5px;
+    height: 27px;
+    border-radius: 27px;
+  }
+
+  .toggle_btn:has(:checked) {
+    background-color: #dfaf6f;
+  }
+
+  .toggle_btn::after {
+    position: absolute;
+    width: 27px;
+    height: 27px;
+  }
+
+  .toggle_btn:has(:checked)::after {
+    left: 27px;
+  }
+}
 </style>

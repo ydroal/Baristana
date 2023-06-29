@@ -6,29 +6,12 @@
   </header>
 
   <div class="container">
-    <!-- <div id="g_id_onload"
-     data-client_id="872587881454-b9lgp1qeldv4utufq0bo4s19e4hg64tt.apps.googleusercontent.com"
-     data-context="signin"
-     data-ux_mode="http://localhost:5173"
-     data-login_uri="http://localhost:3000/api/auth/google"
-     data-nonce=""
-     data-auto_prompt="false">
-</div>
-
-<div class="g_id_signin"
-     data-type="standard"
-     data-shape="rectangular"
-     data-theme="outline"
-     data-text="signin_with"
-     data-size="large"
-     data-logo_alignment="left">
-</div> -->
     <h1>Create Your Own Cafe Experience</h1>
     <p>
       Baristana is an application that brings the fun times we spend in cafes,
-      <br />
+      <span class="br-for-desktop"></span>
       casual conversations with friends, meeting new people,
-      <br />
+      <span class="br-for-desktop"></span>
       and the cozy atmosphere with cafe sound. right to your own home.
     </p>
     <!-- <pre>{{ cafeMusic }}</pre>
@@ -38,7 +21,9 @@
       <VolumeSlider soundType="Cafe music" :audioSources="cafeMusic" />
       <VolumeSlider soundType="Barista sounds" :audioSources="baristaSounds" />
       <VolumeSlider soundType="People talking" :audioSources="peopleTalking" />
-      <ToggleButton @toggle-chat="handleChatToggle" />
+      <div class="toggle_button">
+        <ToggleButton @toggle-chat="handleChatToggle" />
+      </div>
     </div>
   </div>
   <LoginModal :isOpen="isLoginModalOpen" @close="closeModal" />
@@ -153,6 +138,70 @@ p {
 
 .volume_slider {
   margin-top: 5%;
-  width: 40%;
+  /* width: 60%; */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+.toggle_button {
+  position: absolute;
+  top: 93%;
+  left: 0;
+}
+.br-for-desktop {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .br-for-desktop {
+    display: block;
+  }
+}
+@media (min-width: 768px) and (max-width: 980px) and (min-height: 850px) {
+  h1 {
+    margin-top: 20%;
+  }
+  p {
+    margin-bottom: 10%;
+  }
+}
+
+/* Medium devices (landscape phones, 576px and up) */
+@media (min-width: 576px) and (max-width: 767.98px) {
+  p {
+    margin-bottom: 6%;
+  }
+}
+@media (min-width: 576px) and (max-width: 767.98px) and (orientation: landscape), (max-height: 418px) {
+  h1 {
+    font-size: 1.7rem;
+    margin-top: 0;
+  }
+  p {
+    margin-bottom: 1%;
+    font-size: 0.7rem;
+  }
+  .volume_slider {
+    margin-top: 1%;
+  }
+}
+/* Small devices (portrait phones, less than 576px) */
+@media (max-width: 575.98px) {
+  h1 {
+    font-size: 2.1rem;
+    margin-top: 12%;
+  }
+  .slider {
+    width: 200px;
+  }
+  p {
+    font-size: 0.8rem;
+    margin-bottom: 5%;
+    text-align: center;
+  }
+  .volume_slider {
+    margin-top: 8%;
+  }
 }
 </style>

@@ -267,4 +267,141 @@ hr {
   font-size: 0.9rem;
   align-self: flex-end;
 }
+@media (min-height: 850px) {
+  .user-setting_card {
+    width: 75%;
+    height: 60vh;
+    margin-top: 16%;
+  }
+  .user-setting_title {
+    margin-top: 0;
+  }
+}
+@media (max-height: 418px) {
+  .user-setting {
+    overflow: auto;
+  }
+  .user-setting_title {
+    margin-top: 1rem;
+  }
+  hr {
+    margin-bottom: 5%;
+  }
+  .user-setting_card {
+    width: 75%;
+    height: 450px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    margin-top: 10%;
+  }
+  .user-setting_text {
+    color: #efece0;
+    margin-bottom: 4%;
+    width: 60%;
+  }
+  .user-setting_edit-button,
+  .user-setting_cancel-button {
+    width: 4.4rem;
+    color: #efece0;
+    padding: 8px 10px 8px 10px;
+    margin: 0 1.3rem 1.3rem 0;
+    font-size: 0.8rem;
+  }
+}
+
+@media (min-width: 576px) and (max-width: 767.98px) {
+  .user-setting_card {
+    width: 75%;
+    height: 72vh;
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    margin-top: 10%;
+  }
+  .user-setting_text {
+    color: #efece0;
+    margin-bottom: 4%;
+    width: 60%;
+  }
+  .user-setting_edit-button,
+  .user-setting_cancel-button {
+    width: 4.4rem;
+    color: #efece0;
+    padding: 8px 10px 8px 10px;
+    margin: 2rem 1.3rem 1.3rem 0;
+    font-size: 0.8rem;
+  }
+}
+@media (min-width: 576px) and (max-width: 767.98px) and (max-height: 418px) {
+  .user-setting {
+    overflow: auto;
+  }
+  .user-setting_title {
+    margin-top: 1rem;
+  }
+  hr {
+    margin-bottom: 5%;
+  }
+  .user-setting_card {
+    width: 75%;
+    height: 450px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    margin-top: 10%;
+  }
+  .user-setting_text {
+    color: #efece0;
+    margin-bottom: 4%;
+    width: 60%;
+  }
+  .user-setting_edit-button,
+  .user-setting_cancel-button {
+    width: 4.4rem;
+    color: #efece0;
+    padding: 8px 10px 8px 10px;
+    margin: 0 1.3rem 1.3rem 0;
+    font-size: 0.8rem;
+  }
+}
+/* Small devices (portrait phones, less than 576px) */
+@media (max-width: 575.98px) {
+  .user-setting_card {
+    width: 85%;
+    height: 450px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    margin-top: 22%;
+  }
+  .user-setting_text {
+    color: #efece0;
+    margin-bottom: 4%;
+    width: 70%;
+  }
+  .user-setting_edit-button,
+  .user-setting_cancel-button {
+    width: 3.7rem;
+    padding: 8px 10px 8px 10px;
+    margin: 2rem 1.3rem 1.3rem 0;
+    font-size: 0.7rem;
+  }
+  .user-setting_icon {
+    width: 100px;
+    height: 100px;
+    position: absolute;
+    top: -50px; /* 円の半分を外に出す */
+    left: calc(50% - 50px); /* 左辺を親要素の左辺から中央（50%）に配置、さらに62px左にオフセット */
+    overflow: hidden;
+  }
+}
 </style>

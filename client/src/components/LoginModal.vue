@@ -115,7 +115,7 @@ export default {
       // ID tokenをバックエンドに送信
       const userStore = useUserStore();
       axios
-        .post('http://localhost:3000/api/auth/google/onetap', { idToken: idToken })
+        .post(`${import.meta.env.VITE_APP_API_ENDPOINT}auth/google/onetap`, { idToken: idToken })
         .then(async (res) => { // .then の中で await を使うには、そのthenの中の関数も非同期にする
           console.log('Received response from server', res);
           if (res.status === 200) {
@@ -276,5 +276,62 @@ p {
   text-align: center;
   border: none;
   cursor: pointer;
+}
+@media (min-width: 768px) and (max-width: 980px) and (min-height: 850px) {
+  .modal {
+    width: 90%;
+    height: 70vh;
+  }
+  .modal_header {
+    justify-content: center;
+  }
+  h1 {
+    font-size: 2rem;
+  }
+}
+@media (min-width: 576px) and (max-width: 767.98px) {
+  .modal {
+    width: 90%;
+    height: 90%;
+  }
+  .close_button {
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+  }
+  .modal_header {
+    justify-content: center;
+  }
+  .logo {
+    width: 20%;
+  }
+}
+@media (max-height: 418px) {
+  h1 {
+    font-size: 1.6rem;
+  }
+  .modal {
+    height: 85vh;
+  }
+}
+@media (max-width: 575.98px) {
+  .modal {
+    width: 95%;
+    height: 85vh;
+  }
+  .close_button {
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+  }
+  .modal_header {
+    justify-content: center;
+  }
+  .logo {
+    width: 25%;
+  }
+  h1 {
+    font-size: 1.5rem;
+  }
 }
 </style>

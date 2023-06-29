@@ -1,10 +1,12 @@
 <template>
   <div class="chat-page">
-    <div class="volume-slider" v-if="isAudioSourcesLoaded">
-      <VolumeSlider soundType="Cafe music" :audioSources="cafeMusic" />
-      <VolumeSlider soundType="Barista sounds" :audioSources="baristaSounds" />
-      <VolumeSlider soundType="People talking" :audioSources="peopleTalking" />
-      <ToggleButton class="chat-toggle" @click="toggleChatDisplay" @toggle-chat="handleChatToggle" />
+    <div class="volume-slider-wrap">
+      <div class="volume-slider" v-if="isAudioSourcesLoaded">
+        <VolumeSlider soundType="Cafe music" :audioSources="cafeMusic" />
+        <VolumeSlider soundType="Barista sounds" :audioSources="baristaSounds" />
+        <VolumeSlider soundType="People talking" :audioSources="peopleTalking" />
+        <ToggleButton class="chat-toggle" @click="toggleChatDisplay" @toggle-chat="handleChatToggle" />
+      </div>
     </div>
     <div class="chat-table">
       <!-- active user information -->
@@ -93,9 +95,7 @@ export default {
     // アクティブユーザーリストを保持するリアクティブ変数
     let activeUsers = ref([
       // { userId: 1, userName: 'Julien' },
-      // { userId: 2, icon: UserIcon2, userName: 'Issey' },
-      // { userId: 3, userName: 'Emma' },
-      // { userId: 4, userName: 'Yon' }
+      // { userId: 2, icon: UserIcon2, userName: 'Issey' }
     ]);
     const messages = ref([
       // { userId: 1, msg: 'Hello!', username: Yoko, usericon: null },
@@ -103,16 +103,7 @@ export default {
       //   userId: 2,
       //   msg: 'Hi there! blablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablablabla', username: Issey, usericon: null
       // },
-      // { userId: 2, msg: 'How are you?' },
-      // {
-      //   userId: 1,
-      //   msg: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum', username: Yoko, usericon: null
-      // },
-      // {
-      //   userId: 2,
-      //   msg: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pellentesque nec nam aliquam sem. Tempus egestas sed sed risus pretium quam. Odio tempor orci dapibus ultrices in iaculis nunc sed augue. Auctor eu augue ut lectus arcu bibendum at varius. Senectus et netus et malesuada fames ac turpis egestas sed.'
-      // },
-      // { userId: 2, msg: 'Hello!' }
+      // { userId: 2, msg: 'How are you?' }
     ]);
     const currentMessage = ref('');
     const showEmojiPicker = ref(false);
@@ -193,7 +184,7 @@ export default {
 
       reader.onload = () => {
         const arrayBuffer = reader.result;
-        socket.emit('upload', arrayBuffer, (status) => {
+        socket.emit('upload', arrayBuffer, status => {
           console.log(status); // サーバーからの応答を表示
         });
       };
@@ -203,9 +194,16 @@ export default {
 
     // サーバーからのメッセージを待ち受けるリスナーを追加
     socket.on('chat message', messageObj => {
-      // 受け取ったメッセージをmessagesに追加します
+      // 受け取ったメッセージをmessagesに追加
       // messageObjは、メッセージテキスト、ユーザー名、ユーザーアイコンを含むオブジェクト
+      if (messageObj.usericon) {
+        const s3_bucket_name = import.meta.env.VITE_APP_BUCKET_NAME;
+        const s3_region = import.meta.env.VITE_APP_S3_REGION;
+        const obj_key = `${import.meta.env.VITE_APP_S3_OBJ_ICONS}/${messageObj.usericon}`;
+        messageObj.usericon = `https://${s3_bucket_name}.s3.${s3_region}.amazonaws.com/${obj_key}`;
+      }
       messages.value.push(messageObj);
+      console.log(messageObj);
     });
 
     // メッセージを送信するメソッドを定義
@@ -280,15 +278,18 @@ select::-ms-expand {
   justify-content: space-between;
 }
 
-.volume-slider {
-  width: 30%;
+.volume-slider-wrap {
+  width: 35%;
   margin-top: 4%;
   margin-left: 2.8%;
 }
-
-.chat-toggle {
-  margin-left: 2.8%;
+.volume-slider {
+  width: 100%;
 }
+
+/* .chat-toggle {
+  margin-left: 1.2%;
+} */
 .chat-table {
   position: relative;
   width: 55%;
@@ -299,6 +300,7 @@ select::-ms-expand {
   opacity: 76%;
   color: #efece0;
   border-radius: 20px;
+  overflow: auto;
 }
 .active-users {
   color: #efece0;
@@ -421,10 +423,254 @@ hr {
 
 .emoji-picker {
   position: absolute;
-  bottom: 20%; /* 絵文字ピッカーの位置指定 */
-  right: 0; /* 絵文字ピッカーの位置指定 */
+  bottom: 20%;
+  right: 0;
 }
 .file-input {
   display: none;
+}
+@media (min-width: 768px) and (max-width: 980px) and (min-height: 850px) {
+  .chat-page {
+    flex-direction: column;
+    justify-content: unset;
+    overflow: auto;
+  }
+  .volume-slider-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 344px;
+    margin: 0 auto;
+    margin-top: 3%;
+    margin-bottom: 2%;
+  }
+  .volume-slider {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin: 0 auto;
+    margin-left: 0;
+  }
+  .chat-toggle {
+    margin-top: 2%;
+  }
+  .chat-table {
+    width: 80%;
+    height: 45vh;
+    /* max-height: 300px; */
+    margin: 0 auto;
+    margin-top: 5%;
+    overflow: auto;
+  }
+  .icon {
+    width: 6%;
+    align-items: flex-start;
+    margin-right: 1.8rem;
+    margin-top: 1rem;
+  }
+  .emoji-icon,
+  .attach-icon {
+    width: 1.3rem;
+    margin-left: 0.5rem;
+  }
+  .emoji-picker {
+    position: absolute;
+    bottom: 20%;
+    right: -3.5%;
+  }
+}
+@media (min-width: 768px) and (max-width: 980px) and (max-height: 849.98px) {
+  .volume-slider-wrap {
+    width: 244px;
+    margin-top: 4%;
+    margin-left: 2.8%;
+  }
+  .volume-slider {
+    width: 100%;
+  }
+}
+
+@media (min-width: 576px) and (max-width: 767.98px) and (orientation: landscape) {
+  .chat-page {
+    position: relative;  /* Not fixed */
+    min-height: 100vh;
+    flex-direction: column;
+    justify-content: unset;
+    overflow: auto;
+  }
+  .volume-slider-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 344px;
+    margin: 0 auto;
+    height: auto;
+  }
+  .volume-slider {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin: 0 auto;
+    margin-left: 0;
+  }
+  .chat-toggle {
+    margin-top: 2%;
+  }
+  .chat-table {
+    width: 85%;
+    height: auto;
+    margin: 0 auto;
+    margin-top: 1%;
+  }
+}
+@media (min-width: 576px) and (max-width: 767.98px) {
+  .chat-page {
+    flex-direction: column;
+    justify-content: unset;
+    overflow: auto;
+  }
+  .volume-slider-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 344px;
+    margin: 0 auto;
+  }
+  .volume-slider {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin: 0 auto;
+    margin-left: 0;
+  }
+  .chat-toggle {
+    margin-top: 2%;
+  }
+  .chat-table {
+    width: 85%;
+    height: 40vh;
+    margin: 0 auto;
+    margin-top: 1%;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .chat-page {
+    flex-direction: column;
+    justify-content: unset;
+    overflow: auto;
+  }
+
+  .volume-slider-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 244px;
+    margin: 0 auto;
+    margin-top: 1rem;
+  }
+  .volume-slider {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    height: 50%;
+    margin: 0 auto;
+    margin-left: 0;
+  }
+  .chat-toggle {
+    margin-top: 2%;
+  }
+  .chat-table {
+    width: 85%;
+    height: 44vh;
+    margin: 0 auto;
+    margin-top: 0;
+    margin-bottom: 2%;
+  }
+  .message-area {
+    height: 28vh;
+  }
+  .typing-area textarea {
+    /* margin: 0.4rem 0 auto 1.3rem; */
+    width: 85%;
+    height: 12%;
+    position: absolute;
+    bottom: 5%;
+    left: 0;
+  }
+  .icon {
+    width: 8%;
+    align-items: flex-start;
+    position: absolute;
+    bottom: 11.3%;
+    left: 80%;
+    /* margin-right: 2rem;
+    margin-top: 0.4rem; */
+  }
+  .emoji-icon,
+  .attach-icon {
+    width: 1.2rem;
+    margin-left: 0.4rem;
+  }
+  .emoji-picker {
+    position: absolute;
+    bottom: 100%;
+    right: 0%;
+  }
+}
+@media (max-height: 418px) {
+  .chat-page {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .volume-slider-wrap {
+    width: 30%;
+    margin-top: 5%;
+    margin-left: 2.8%;
+  }
+  .volume-slider {
+    width: 100%;
+  }
+
+  .chat-table {
+    position: relative;
+    width: 55%;
+    height: 70vh;
+    margin-top: 2%;
+    margin-right: 3%;
+    background-color: #232321;
+    opacity: 76%;
+    color: #efece0;
+    border-radius: 20px;
+    overflow: auto;
+  }
+  .message-area {
+    height: 44vh;
+  }
+  .icon {
+    width: 8%;
+    align-items: flex-start;
+    position: absolute;
+    bottom: 8%;
+    left: 82%;
+  }
+  .typing-area textarea {
+    margin: 0rem 0 auto 1.3rem;
+    width: 75%;
+    height: 15%;
+    position: absolute;
+    left: 0;
+  }
+  .emoji-picker {
+    position: absolute;
+    bottom: 100%;
+    right: 0%;
+  }
+  .emoji-icon,
+  .attach-icon {
+    width: 1.3rem;
+    margin-left: 0.5rem;
+  }
 }
 </style>

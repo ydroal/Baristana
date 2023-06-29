@@ -51,16 +51,18 @@ export default {
 
 <style scoped>
 div {
+  /* position: relative; */
   position: fixed;
   width: 100%;
   height: 100%;
+  /* min-height: 100vh; */
 }
-header {
+/* header {
   line-height: 1.5;
   max-height: 100vh;
-}
+} */
 
-@media (min-width: 1024px) {
+/* @media (min-width: 1024px) {
   header {
     display: flex;
     place-items: center;
@@ -76,5 +78,6 @@ header {
     place-items: flex-start;
     flex-wrap: wrap;
   }
-}
+} */
+
 </style>
