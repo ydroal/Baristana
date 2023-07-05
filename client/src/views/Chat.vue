@@ -30,27 +30,50 @@
           <img v-if="message.userId !== currentUserId" :src="message.usericon || UserIcon2" class="user-icon" />
           <div class="user-contents">
             <div v-if="message.userId !== currentUserId" class="user-name">{{ message.username }}</div>
-            <div class="message-text">{{ message.msg }}</div>
+            <div v-if="message.imageUrl" class="message-image"><img :src="message.imageUrl" /></div>
+            <div v-else class="message-text">{{ message.msg }}</div>
+            <!-- <div class="message-text">{{ message.msg }}</div> -->
           </div>
         </div>
+        <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
       </div>
       <hr class="hr-foot" />
       <!-- typing area -->
       <div class="typing-area">
+        <div class="message-file-sending" v-if="selectedFile">File Selected</div>
+        <div class="warning" v-if="selectedFile && fileMib > 3">
+          File size must be 3MB or less! Please select a different file or cancel the current selection.
+        </div>
         <textarea
+          v-if="!selectedFile"
           v-model="currentMessage"
           @keydown.enter.exact="sendMessage"
           placeholder="Type a message"
           rows="4"
           class="chat-input"
         ></textarea>
-        <div class="icon">
+        <!-- <div class="attached-file-icon" v-if="selectedFile">{{ selectedFile.name }}</div> -->
+        <div class="icon" v-if="!selectedFile">
           <img :src="EmojiIcon" alt="EmojiIcon" class="emoji-icon" @click="showEmojiPicker = !showEmojiPicker" />
           <div v-if="showEmojiPicker" class="emoji-picker">
             <EmojiPicker @emoji_click="addEmoji" />
           </div>
-          <input type="file" ref="fileInput" multiple class="file-input" @change="handleFileUpload" />
+          <input
+            type="file"
+            ref="fileInput"
+            multiple
+            accept="image/*,.pdf"
+            class="file-input"
+            @change="handleFileUpload"
+          />
           <img :src="AttachIcon" alt="AttachIcon" class="attach-icon" @click="triggerFileInput" />
+        </div>
+        <div class="send-button" v-if="selectedFile && fileMib <= 3">
+          <img :src="SendIcon" alt="SendIcon" class="send-icon" @click="sendUploadedFile" />
+        </div>
+        <div class="preview-image" v-if="selectedFile">
+          <img :src="previewImageUrl" alt="Preview" class="preview-img" />
+          <div><button class="close_button" @click="closePreview">&#10005;</button></div>
         </div>
       </div>
     </div>
@@ -68,6 +91,7 @@ import VolumeSlider from '../components/VolumeSlider.vue';
 import ToggleButton from '../components/ToggleButton.vue';
 import EmojiIcon from '@/assets/images/icon_emoji.svg';
 import AttachIcon from '@/assets/images/icon_attach_file.svg';
+import SendIcon from '@/assets/images/icon_send.svg';
 import EmojiPicker from '@/components/EmojiPicker.vue';
 import UserIcon2 from '@/assets/images/icon_user2.png';
 
@@ -108,10 +132,15 @@ export default {
     const currentMessage = ref('');
     const showEmojiPicker = ref(false);
     const fileInput = ref(null);
+    const errorMessage = ref(null);
 
     // chatのオンオフ
     const isChatVisible = ref(true);
     const router = useRouter();
+
+    let selectedFile = ref(null); // 選択された画像ファイルを保持するための変数
+    let previewImageUrl = ref(null);
+    let fileMib = ref(null);
 
     onMounted(async () => {
       // Promise.all の結果を await で待つように修正
@@ -178,18 +207,15 @@ export default {
     };
 
     const handleFileUpload = event => {
-      const file = event.target.files[0];
-      console.log(file); // デバッグ用
-      const reader = new FileReader();
+      selectedFile.value = event.target.files[0];
+      let fileSize = event.target.files[0].size;
+      fileMib.value = fileSize / 1024 ** 2;
+      previewImageUrl.value = URL.createObjectURL(selectedFile.value); //オブジェクトURLを作成
+    };
 
-      reader.onload = () => {
-        const arrayBuffer = reader.result;
-        socket.emit('upload', arrayBuffer, status => {
-          console.log(status); // サーバーからの応答を表示
-        });
-      };
-
-      reader.readAsArrayBuffer(file); // ファイルをArrayBufferとして読み込む
+    const closePreview = () => {
+      selectedFile.value = null;
+      previewImageUrl.value = null;
     };
 
     // サーバーからのメッセージを待ち受けるリスナーを追加
@@ -205,6 +231,20 @@ export default {
       messages.value.push(messageObj);
       console.log(messageObj);
     });
+    // サーバーからの画像ファイルを受信するリスナー
+    socket.on('chat file', fileObj => {
+      // 受け取ったメッセージをmessagesに追加
+      // fileObjは、画像ファイル、ユーザー名、ユーザーアイコンを含むオブジェクト
+      if (fileObj.usericon) {
+        const s3_bucket_name = import.meta.env.VITE_APP_BUCKET_NAME;
+        const s3_region = import.meta.env.VITE_APP_S3_REGION;
+        const obj_key = `${import.meta.env.VITE_APP_S3_OBJ_ICONS}/${fileObj.usericon}`;
+        fileObj.usericon = `https://${s3_bucket_name}.s3.${s3_region}.amazonaws.com/${obj_key}`;
+      }
+      const blob = new Blob([fileObj.file]); //ブラウザからアクセスできるようblobに変換
+      const url = URL.createObjectURL(blob); //blobにアクセスするURLを発行
+      messages.value.push({ ...fileObj, imageUrl: url });
+    });
 
     // メッセージを送信するメソッドを定義
     const sendMessage = () => {
@@ -214,6 +254,31 @@ export default {
         currentMessage.value = ''; // メッセージをクリアします
       }
     };
+    // ファイルを送信するメソッドを定義
+    const sendUploadedFile = () => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const arrayBuffer = reader.result;
+        socket.emit('uploaded file', arrayBuffer, error => {
+          console.log('送るよ！');
+          if (error) {
+            console.error('Error sending the file: ', error);
+          } else {
+            console.log('File sent successfully');
+          }
+        });
+        selectedFile.value = null;
+      };
+      reader.readAsArrayBuffer(selectedFile.value);
+    };
+
+    // ファイルの容量オーバーで送信できなかった場合のエラーを受信
+    socket.on('upload error', data => {
+      errorMessage.value = data.message;
+      setTimeout(() => {
+        errorMessage.value = null;
+      }, 5000); // 5秒後にerrorMessageをnullに設定
+    });
 
     return {
       cafeMusic,
@@ -226,15 +291,22 @@ export default {
       displayedUsers,
       EmojiIcon,
       AttachIcon,
+      SendIcon,
       currentMessage,
       showEmojiPicker,
       UserIcon2,
       fileInput,
+      selectedFile,
+      previewImageUrl,
+      fileMib,
+      errorMessage,
       addEmoji,
       triggerFileInput,
       handleFileUpload,
       toggleChatDisplay,
-      sendMessage
+      sendMessage,
+      closePreview,
+      sendUploadedFile
     };
   }
 };
@@ -317,6 +389,7 @@ hr {
   height: 70%;
   overflow-y: auto; /*コンテンツが指定された高さを超えた場合、垂直方向にスクロールバーが表示*/
 }
+
 .message-text {
   font-size: 0.8rem;
   font-weight: 300;
@@ -363,6 +436,16 @@ hr {
   margin-left: 0.3rem;
   margin-top: 21px; /* user-iconの高さの半分＋マージン */
 }
+.message-left .message-image {
+  width: 100%;
+  max-width: 300px;
+  /* background-color: #a5a4a1; */
+  height: auto; /* 画像のアスペクト比を保持 */
+  /* border-radius: 0px 12px 12px 12px; */
+  margin-left: 0.3rem;
+  margin-top: 21px; /* user-iconの高さの半分＋マージン */
+  text-align: center;
+}
 
 .message-right {
   display: flex;
@@ -376,6 +459,29 @@ hr {
   border-radius: 12px 0 12px 12px;
   margin-right: 0.8rem;
 }
+.message-right .message-image {
+  /* width: 50%; */
+  max-width: 300px;
+  align-self: flex-end;
+  height: auto; /* 画像のアスペクト比を保持 */
+  margin-right: 0.8rem;
+  text-align: center;
+}
+.message-image img {
+  width: 100%;
+  border-radius: 12px;
+  height: auto; /* 画像のアスペクト比を保持 */
+  object-fit: cover; /* アスペクト比を保持しながら、コンテナに画像をフィットさせる */
+}
+.error-message {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  color: #f30100;
+  margin-right: 0.8rem;
+
+  font-weight: 300;
+}
 
 .hr-foot {
   position: absolute;
@@ -387,6 +493,25 @@ hr {
   justify-content: space-between;
 }
 
+.message-file-sending {
+  width: 80%;
+  margin-top: 0.5rem;
+  color: #ed923c;
+  padding: 0.5rem;
+  text-align: center;
+  position: relative;
+}
+.warning {
+  width: 80%;
+  margin-top: 0.5rem;
+  color: #ffffff;
+  padding: 0.5rem;
+  text-align: center;
+  background-color: #ed923c;
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0;
+}
 .typing-area textarea {
   margin: 0.5rem 0 auto 1.3rem;
   width: 80%;
@@ -405,7 +530,8 @@ hr {
   color: #efece0;
   opacity: 1;
 }
-.icon {
+.icon,
+.send-button {
   width: 10%;
   display: flex;
   align-items: center;
@@ -420,6 +546,11 @@ hr {
 .attach-icon {
   transform: rotate(45deg);
 }
+.send-icon {
+  width: 1.6rem;
+  margin-left: 0.2rem;
+  margin-top: 0.4rem;
+}
 
 .emoji-picker {
   position: absolute;
@@ -429,6 +560,48 @@ hr {
 .file-input {
   display: none;
 }
+.preview-image {
+  width: 30%;
+  max-width: 180px;
+  background-color: #ffffff;
+  border-radius: 8%;
+  height: auto; /* 画像のアスペクト比を保持 */
+  /* object-fit: cover; アスペクト比を保持しながら、コンテナに画像をフィットさせる */
+  position: absolute;
+  bottom: 20%;
+  right: 0;
+}
+.preview-img {
+  width: 100%;
+  height: auto; /* 画像のアスペクト比を保持 */
+  object-fit: cover; /* アスペクト比を保持しながら、コンテナに画像をフィットさせる */
+}
+.close_button {
+  position: absolute;
+  top: 0.3%;
+  left: 0.3%;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background-color: #ed923c;
+  color: #f4f2f0;
+  font-size: 1em;
+  font-weight: 100;
+  line-height: 1.5rem;
+  text-align: center;
+  border: none;
+  cursor: pointer;
+}
+/* .attached-file-icon {
+  padding: 0.8rem;
+  background-color: #ed923c;
+  color: #f4f2f0;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  height: 1.5rem;
+  text-align: center;
+} */
+
 @media (min-width: 768px) and (max-width: 980px) and (min-height: 850px) {
   .chat-page {
     flex-direction: column;
@@ -550,7 +723,32 @@ hr {
     width: 85%;
     height: 40vh;
     margin: 0 auto;
-    margin-top: 1%;
+    margin-top: 3%;
+  }
+  .icon {
+    width: 12%;
+    align-items: flex-start;
+    position: absolute;
+    bottom: 7%;
+    left: 85%;
+    /* margin-right: 2rem;
+    margin-top: 0.4rem; */
+  }
+  .typing-area textarea {
+    margin: 0rem 0 auto 1.3rem;
+    width: 78%;
+    height: 15%;
+    position: absolute;
+    left: 0;
+  }
+  .message-area {
+    height: 65%;
+    overflow-y: auto; /*コンテンツが指定された高さを超えた場合、垂直方向にスクロールバーが表示*/
+  }
+  .emoji-picker {
+    position: absolute;
+    bottom: 96%;
+    right: 0%;
   }
 }
 
@@ -592,7 +790,7 @@ hr {
   }
   .typing-area textarea {
     /* margin: 0.4rem 0 auto 1.3rem; */
-    width: 85%;
+    width: 76%;
     height: 12%;
     position: absolute;
     bottom: 5%;
@@ -616,6 +814,17 @@ hr {
     position: absolute;
     bottom: 100%;
     right: 0%;
+  }
+  .message-file-sending {
+    margin-top: 0;
+    padding: 0.3rem;
+  }
+  .warning {
+    width: 80%;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+    bottom: -1.8rem;
+    left: 0;
   }
 }
 @media (max-height: 418px) {

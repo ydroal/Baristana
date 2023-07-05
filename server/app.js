@@ -138,6 +138,39 @@ io.on('connection', (socket) => {
     }
   });
 
+  // 添付ファイルを受け取るためのイベントリスナーを設定
+  const MAX_FILE_SIZE = 3; // MB
+  socket.on('uploaded file', (file) => {
+    console.log('ファイル受信');
+    const fileSize = file.byteLength / 1024 ** 2;
+    if (fileSize > MAX_FILE_SIZE) {
+      console.error('File is too large');
+      socket.emit('upload error', { message: 'File is too large. Maximum allowed size is ${MAX_FILE_SIZE} MB' }); //ファイル送信者にのみ送信
+      return;
+    }
+
+    const userId = socketToUserId[socket.id];
+    if (userId) {
+      const query = 'SELECT username, profile_picture_url FROM user WHERE id = ?';
+      connection.query(query, [userId], function(err, results, fields) {
+        if (err) throw err;
+        const username = results[0].username;
+        const usericon = results[0].profile_picture_url;
+
+        // メッセージ、ユーザー名、ユーザーアイコンを含むオブジェクトを作成
+        const fileObj = {
+          file: file,
+          username: username,
+          usericon: usericon,
+          userId: userId 
+        } 
+        io.emit('chat file', fileObj);
+      });
+    } else {
+      console.error('Unknown user');
+    }
+  });
+
   socket.on('disconnect', () => {
     // ユーザーが切断したときにactiveUsersリストから削除
     activeUsers = activeUsers.filter(user => user.userId !== socketToUserId[socket.id]);
