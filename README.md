@@ -61,9 +61,9 @@ npm install
 
 ### Database Setup
 
-1.Install and configure a MySQL server, create a database, and set up a user with the necessary privileges.
+1. Install and configure a MySQL server, create a database, and set up a user with the necessary privileges.
 
-2.Setup tables in your database　as shown below.
+2. Setup tables in your database　as shown below.
 #### bgm
 
 | Field | Type | Null | Key | Default | Extra |
@@ -123,7 +123,7 @@ Now, your application should be ready to run locally.
 
 Here's how to use the main features of Baristana:
 
-###　 Cafe BGM Volume Sliders
+### Cafe BGM Volume Sliders
 
 ![BGM](./assets/bgm.png)
 
