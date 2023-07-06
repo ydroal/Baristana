@@ -43,17 +43,17 @@ This application is built with Vue.js for frontend, Node.js and Express for back
 
 ### Installation
 
-1.Clone the GitHub repository to your local machine.
+1. Clone the GitHub repository to your local machine.
 ```sh
 git clone https://github.com/ydroal/Baristana.git
 ```
 
-2.Navigate to the frontend directory (replace "frontend-directory" with the actual directory name) and install the required packages.
+2. Navigate to the frontend directory (replace "frontend-directory" with the actual directory name) and install the required packages.
 ```sh
 cd YOUR-REPOSITORY/frontend-directory
 npm install
 ```
-3.Do the same for the backend directory.
+3. Do the same for the backend directory.
 ```sh
 cd YOUR-REPOSITORY/backend-directory
 npm install
@@ -64,7 +64,7 @@ npm install
 1.Install and configure a MySQL server, create a database, and set up a user with the necessary privileges.
 
 2.Setup tables in your database　as shown below.
-### bgm
+#### bgm
 
 | Field | Type | Null | Key | Default | Extra |
 |-------|------|------|-----|---------|-------|
@@ -105,7 +105,7 @@ npm install
 | message | text | NO |  | NULL |  |
 | created_at | datetime | NO |  | NULL |  |
 
-3.Set up the database connection using the following configuration but replace the credentials with your own. It's recommended to use environment variables for security purposes.
+3. Set up the database connection using the following configuration but replace the credentials with your own. It's recommended to use environment variables for security purposes.  
 *your can setting for environment variables: server/.env
 
 ```
@@ -123,7 +123,7 @@ Now, your application should be ready to run locally.
 
 Here's how to use the main features of Baristana:
 
-###　Customizable Cafe BGM
+###　 Cafe BGM Volume Sliders
 
 ![BGM](./assets/bgm.png)
 
@@ -138,6 +138,7 @@ To access the chat feature, click on the 'Chat' toggle button located in the ind
 ### Login
 
 ![Login](./assets/login.png)
+
 Click on the 'Login' button in the navigation bar. You will be redirected to the Google authentication page. Enter your Google account credentials to log in.
 
 ### User Settings
