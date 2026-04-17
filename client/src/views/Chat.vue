@@ -1,4 +1,4 @@
-<script>
+<script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useBgmStore } from '@/stores/bgm';
 import { useRouter } from 'vue-router';
@@ -12,184 +12,150 @@ import SendIcon from '@/assets/images/icon_send.svg';
 import EmojiPicker from '@/components/EmojiPicker.vue';
 import UserIcon2 from '@/assets/images/icon_user2.png';
 
-export default {
-  components: {
-    VolumeSlider,
-    ToggleButton,
-    EmojiPicker
-  },
-  setup() {
-    const bgmStore = useBgmStore();
-    const userStore = useUserStore();
+const bgmStore = useBgmStore();
+const userStore = useUserStore();
 
-    // 音源データのフェッチが完了したかどうかを示すステート
-    const isAudioSourcesLoaded = ref(false);
+// 音源データのフェッチが完了したかどうかを示すステート
+const isAudioSourcesLoaded = ref(false);
 
-    const currentUserId = computed(() => (userStore.getUser ? userStore.getUser.id : null));
+const currentUserId = computed(() => (userStore.getUser ? userStore.getUser.id : null));
 
-    const socket = io('http://localhost:3000');
+const socket = io('http://localhost:3000', {
+  auth: { token: localStorage.getItem('jwt') }
+});
 
-    // アクティブユーザーリストを保持するリアクティブ変数
-    let activeUsers = ref([]);
-    const messages = ref([]);
-    const currentMessage = ref('');
-    const showEmojiPicker = ref(false);
-    const fileInput = ref(null);
-    const errorMessage = ref(null);
+// アクティブユーザーリストを保持するリアクティブ変数
+let activeUsers = ref([]);
+const messages = ref([]);
+const currentMessage = ref('');
+const showEmojiPicker = ref(false);
+const fileInput = ref(null);
+const errorMessage = ref(null);
 
-    // chatのオンオフ
-    const isChatVisible = ref(true);
-    const router = useRouter();
+// chatのオンオフ
+const isChatVisible = ref(true);
+const router = useRouter();
 
-    let selectedFile = ref(null); // 選択された画像ファイルを保持するための変数
-    let previewImageUrl = ref(null);
-    let fileMib = ref(null);
+let selectedFile = ref(null); // 選択された画像ファイルを保持するための変数
+let previewImageUrl = ref(null);
+let fileMib = ref(null);
 
-    onMounted(async () => {
-      if (!bgmStore.cafe_music.length) {
-        await Promise.all([bgmStore.fetchCafeMusic(), bgmStore.fetchBaristaSounds(), bgmStore.fetchPeopleTalking()]);
-      }
-      isAudioSourcesLoaded.value = true;
-      socket.emit('login', currentUserId.value);
-      // 'user joined'イベントをサーバに送信
-      socket.emit('user joined', currentUserId.value);
-    });
+onMounted(async () => {
+  if (!bgmStore.cafe_music.length) {
+    await Promise.all([bgmStore.fetchCafeMusic(), bgmStore.fetchBaristaSounds(), bgmStore.fetchPeopleTalking()]);
+  }
+  isAudioSourcesLoaded.value = true;
+  // 'user joined'イベントをサーバに送信
+  socket.emit('user joined');
+});
 
-    socket.on('active users update', updatedActiveUsers => {
-      // サーバから送られてきた最新のアクティブユーザーリストを取得
-      activeUsers.value = updatedActiveUsers;
-    });
+socket.on('active users update', updatedActiveUsers => {
+  // サーバから送られてきた最新のアクティブユーザーリストを取得
+  activeUsers.value = updatedActiveUsers;
+});
 
-    const disconnectChat = () => {
-      socket.disconnect(); // ここで'socket'はChat.vueで初期化されたsocket.ioのインスタンスを参照
-      messages.value = []; // メッセージをクリア
-    };
+const disconnectChat = () => {
+  socket.disconnect(); // ここで'socket'はChat.vueで初期化されたsocket.ioのインスタンスを参照
+  messages.value = []; // メッセージをクリア
+};
 
-    // チャットがオンオフを制御する関数
-    const handleChatToggle = async isChatActive => {
-      if (userStore.isLoggedIn) {
-        await userStore.toggleChatEnabled(isChatActive);
-      }
+// チャットがオンオフを制御する関数
+const handleChatToggle = async isChatActive => {
+  if (userStore.isLoggedIn) {
+    await userStore.toggleChatEnabled(isChatActive);
+  }
 
-      if (!isChatActive) {
-        disconnectChat(); // チャットが非アクティブになったとき、disconnectChatメソッドを呼び出します。
-        router.push('/'); // チャットが非アクティブの場合、ホームにリダイレクト
-      }
-    };
-
-    const toggleChatDisplay = () => {
-      isChatVisible.value = !isChatVisible.value;
-      handleChatToggle(isChatVisible.value);
-    };
-
-    const displayedUsers = computed(() => {
-      // composition apiではthisは使用しない。valueでアクセス
-      return activeUsers.value.slice(0, 3);
-    });
-
-    const addEmoji = emoji => {
-      currentMessage.value += emoji;
-      showEmojiPicker.value = false;
-    };
-
-    // ファイル選択ダイアログを開くメソッド
-    const triggerFileInput = () => {
-      fileInput.value.click();
-    };
-
-    const handleFileUpload = event => {
-      selectedFile.value = event.target.files[0];
-      let fileSize = event.target.files[0].size;
-      fileMib.value = fileSize / 1024 ** 2;
-      previewImageUrl.value = URL.createObjectURL(selectedFile.value); //オブジェクトURLを作成
-    };
-
-    const closePreview = () => {
-      selectedFile.value = null;
-      previewImageUrl.value = null;
-    };
-
-    // サーバーからのメッセージを待ち受けるリスナーを追加
-    socket.on('chat message', messageObj => {
-      // 受け取ったメッセージをmessagesに追加
-      // messageObjは、メッセージテキスト、ユーザー名、ユーザーアイコンを含むオブジェクト
-      if (messageObj.usericon) {
-        const s3_bucket_name = import.meta.env.VITE_APP_BUCKET_NAME;
-        const s3_region = import.meta.env.VITE_APP_S3_REGION;
-        const obj_key = `${import.meta.env.VITE_APP_S3_OBJ_ICONS}/${messageObj.usericon}`;
-        messageObj.usericon = `https://${s3_bucket_name}.s3.${s3_region}.amazonaws.com/${obj_key}`;
-      }
-      messages.value.push(messageObj);
-    });
-    // サーバーからの画像ファイルを受信するリスナー
-    socket.on('chat file', fileObj => {
-      // 受け取ったメッセージをmessagesに追加
-      // fileObjは、画像ファイル、ユーザー名、ユーザーアイコンを含むオブジェクト
-      if (fileObj.usericon) {
-        const s3_bucket_name = import.meta.env.VITE_APP_BUCKET_NAME;
-        const s3_region = import.meta.env.VITE_APP_S3_REGION;
-        const obj_key = `${import.meta.env.VITE_APP_S3_OBJ_ICONS}/${fileObj.usericon}`;
-        fileObj.usericon = `https://${s3_bucket_name}.s3.${s3_region}.amazonaws.com/${obj_key}`;
-      }
-      const blob = new Blob([fileObj.file]); //ブラウザからアクセスできるようblobに変換
-      const url = URL.createObjectURL(blob); //blobにアクセスするURLを発行
-      messages.value.push({ ...fileObj, imageUrl: url });
-    });
-
-    // メッセージを送信するメソッドを定義
-    const sendMessage = () => {
-      // メッセージが空でなければ送信します
-      if (currentMessage.value.trim() !== '') {
-        socket.emit('chat message', currentMessage.value);
-        currentMessage.value = ''; // メッセージをクリアします
-      }
-    };
-    // ファイルを送信するメソッドを定義
-    const sendUploadedFile = () => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const arrayBuffer = reader.result;
-        socket.emit('uploaded file', arrayBuffer);
-        selectedFile.value = null;
-      };
-      reader.readAsArrayBuffer(selectedFile.value);
-    };
-
-    // ファイルの容量オーバーで送信できなかった場合のエラーを受信
-    socket.on('upload error', data => {
-      errorMessage.value = data.message;
-      setTimeout(() => {
-        errorMessage.value = null;
-      }, 5000); // 5秒後にerrorMessageをnullに設定
-    });
-
-    return {
-      isAudioSourcesLoaded,
-      activeUsers,
-      currentUserId,
-      messages,
-      displayedUsers,
-      EmojiIcon,
-      AttachIcon,
-      SendIcon,
-      currentMessage,
-      showEmojiPicker,
-      UserIcon2,
-      fileInput,
-      selectedFile,
-      previewImageUrl,
-      fileMib,
-      errorMessage,
-      addEmoji,
-      triggerFileInput,
-      handleFileUpload,
-      toggleChatDisplay,
-      sendMessage,
-      closePreview,
-      sendUploadedFile
-    };
+  if (!isChatActive) {
+    disconnectChat(); // チャットが非アクティブになったとき、disconnectChatメソッドを呼び出します。
+    router.push('/'); // チャットが非アクティブの場合、ホームにリダイレクト
   }
 };
+
+const toggleChatDisplay = () => {
+  isChatVisible.value = !isChatVisible.value;
+  handleChatToggle(isChatVisible.value);
+};
+
+const displayedUsers = computed(() => {
+  // composition apiではthisは使用しない。valueでアクセス
+  return activeUsers.value.slice(0, 3);
+});
+
+const addEmoji = emoji => {
+  currentMessage.value += emoji;
+  showEmojiPicker.value = false;
+};
+
+// ファイル選択ダイアログを開くメソッド
+const triggerFileInput = () => {
+  fileInput.value.click();
+};
+
+const handleFileUpload = event => {
+  selectedFile.value = event.target.files[0];
+  let fileSize = event.target.files[0].size;
+  fileMib.value = fileSize / 1024 ** 2;
+  previewImageUrl.value = URL.createObjectURL(selectedFile.value); //オブジェクトURLを作成
+};
+
+const closePreview = () => {
+  selectedFile.value = null;
+  previewImageUrl.value = null;
+};
+
+// サーバーからのメッセージを待ち受けるリスナーを追加
+socket.on('chat message', messageObj => {
+  // 受け取ったメッセージをmessagesに追加
+  // messageObjは、メッセージテキスト、ユーザー名、ユーザーアイコンを含むオブジェクト
+  if (messageObj.usericon) {
+    const s3_bucket_name = import.meta.env.VITE_APP_BUCKET_NAME;
+    const s3_region = import.meta.env.VITE_APP_S3_REGION;
+    const obj_key = `${import.meta.env.VITE_APP_S3_OBJ_ICONS}/${messageObj.usericon}`;
+    messageObj.usericon = `https://${s3_bucket_name}.s3.${s3_region}.amazonaws.com/${obj_key}`;
+  }
+  messages.value.push(messageObj);
+});
+// サーバーからの画像ファイルを受信するリスナー
+socket.on('chat file', fileObj => {
+  // 受け取ったメッセージをmessagesに追加
+  // fileObjは、画像ファイル、ユーザー名、ユーザーアイコンを含むオブジェクト
+  if (fileObj.usericon) {
+    const s3_bucket_name = import.meta.env.VITE_APP_BUCKET_NAME;
+    const s3_region = import.meta.env.VITE_APP_S3_REGION;
+    const obj_key = `${import.meta.env.VITE_APP_S3_OBJ_ICONS}/${fileObj.usericon}`;
+    fileObj.usericon = `https://${s3_bucket_name}.s3.${s3_region}.amazonaws.com/${obj_key}`;
+  }
+  const blob = new Blob([fileObj.file]); //ブラウザからアクセスできるようblobに変換
+  const url = URL.createObjectURL(blob); //blobにアクセスするURLを発行
+  messages.value.push({ ...fileObj, imageUrl: url });
+});
+
+// メッセージを送信するメソッドを定義
+const sendMessage = () => {
+  // メッセージが空でなければ送信します
+  if (currentMessage.value.trim() !== '') {
+    socket.emit('chat message', currentMessage.value);
+    currentMessage.value = ''; // メッセージをクリアします
+  }
+};
+// ファイルを送信するメソッドを定義
+const sendUploadedFile = () => {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const arrayBuffer = reader.result;
+    socket.emit('uploaded file', arrayBuffer);
+    selectedFile.value = null;
+  };
+  reader.readAsArrayBuffer(selectedFile.value);
+};
+
+// ファイルの容量オーバーで送信できなかった場合のエラーを受信
+socket.on('upload error', data => {
+  errorMessage.value = data.message;
+  setTimeout(() => {
+    errorMessage.value = null;
+  }, 5000); // 5秒後にerrorMessageをnullに設定
+});
 </script>
 
 <template>

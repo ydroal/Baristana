@@ -176,6 +176,9 @@ router.post('/auth/logout', verifyToken, (req, res, next) => {
 
 // chat_enabledの値をトグルする
 router.put('/active_user/:id/chat_enabled', verifyToken, (req, res) => {
+  if (String(req.user.id) !== String(req.params.id)) {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
   const userId = req.params.id;  // データベースのユーザーIDを取得
   const chatEnabled = req.body.chat_enabled;
 
@@ -205,7 +208,14 @@ router.get('/user/:id', verifyToken, async (req, res) => {
 });
 
 // icon画像ファイルをメモリに一時保存
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 3 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    cb(null, allowed.includes(file.mimetype));
+  }
+});
 
 // S3にアップロード
 const uploadFile = async (req) => {
@@ -223,11 +233,14 @@ const uploadFile = async (req) => {
 };
 
 // ユーザー情報ユーザーアイコン更新エンドポイント(画像ファイルアップロード用にmulterのuploadメソッドを適用)
-router.put('/user/:userId/icon', upload.single('icon'), async (req, res) => {
-  // iconがあれば、uploadメソッドでreq.fileに格納されている
-  if (req.file) {
-    await uploadFile(req);
+router.put('/user/:userId/icon', verifyToken, upload.single('icon'), async (req, res) => {
+  if (String(req.user.id) !== String(req.params.userId)) {
+    return res.status(403).json({ message: 'Forbidden' });
   }
+  if (!req.file) {
+    return res.status(400).json({ message: 'No file uploaded' });
+  }
+  await uploadFile(req);
   const query = `UPDATE user SET profile_picture_url = ? WHERE id = ?`;
   let params = [req.body.profile_picture_url, req.params.userId];
   connection.query(query, params, (err, result) => {
@@ -244,7 +257,10 @@ router.put('/user/:userId/icon', upload.single('icon'), async (req, res) => {
 });
 
 // ユーザー情報username更新エンドポイント
-router.put('/user/:userId', (req, res) => {
+router.put('/user/:userId', verifyToken, (req, res) => {
+  if (String(req.user.id) !== String(req.params.userId)) {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
   const query = `UPDATE user SET username = ? WHERE id = ?`;
   let params = [req.body.username, req.params.userId];
   connection.query(query, params, (err, result) => {

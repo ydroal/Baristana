@@ -1,4 +1,4 @@
-<script>
+<script setup>
 import { ref, watch, computed } from 'vue';
 import { useLoginModalStore } from '@/stores/loginModal';
 import { useUserStore } from '@/stores/user';
@@ -6,50 +6,38 @@ import { useRouter } from 'vue-router';
 import Logo from '@/assets/images/logo.svg';
 import UserIcon from '@/assets/images/icon_user.svg';
 
-export default {
-  components: {},
-  setup() {
-    const logo = ref(Logo);
-    const userIcon = ref(UserIcon);
-    const loginModalStore = useLoginModalStore();
-    const userStore = useUserStore();
-    const router = useRouter();
+const logo = ref(Logo);
+const userIcon = ref(UserIcon);
+const loginModalStore = useLoginModalStore();
+const userStore = useUserStore();
+const router = useRouter();
 
-    // chat_enabledの状態に基づいて適切なページへ遷移
-    const redirectTo = computed(() => (userStore.chat_enabled ? '/chat' : '/'));
+// chat_enabledの状態に基づいて適切なページへ遷移
+const redirectTo = computed(() => (userStore.chat_enabled ? '/chat' : '/'));
 
-    // userStore.isLoggedInの変化を監視
-    watch(
-      () => userStore.isLoggedIn,
-      async (newVal, oldVal) => {
-        // ログイン状態が変わった時にユーザー情報を取得
-        if (newVal !== oldVal && newVal === true) {
-          await userStore.fetchUser();
-        }
-      }
-    );
+const isLoggedIn = computed(() => userStore.isLoggedIn);
 
-    function login() {
-      loginModalStore.openModal();
+// userStore.isLoggedInの変化を監視
+watch(
+  () => userStore.isLoggedIn,
+  async (newVal, oldVal) => {
+    // ログイン状態が変わった時にユーザー情報を取得
+    if (newVal !== oldVal && newVal === true) {
+      await userStore.fetchUser();
     }
-    function logout() {
-      userStore.logout();
-      router.push('/');
-    }
-    function goToUserSetting() {
-      router.push('/user-setting');
-    }
-    return {
-      logo,
-      userIcon,
-      login,
-      logout,
-      goToUserSetting,
-      redirectTo,
-      isLoggedIn: computed(() => userStore.isLoggedIn)
-    };
   }
-};
+);
+
+function login() {
+  loginModalStore.openModal();
+}
+function logout() {
+  userStore.logout();
+  router.push('/');
+}
+function goToUserSetting() {
+  router.push('/user-setting');
+}
 </script>
 
 <template>

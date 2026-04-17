@@ -1,3 +1,56 @@
+<script setup>
+import { ref, onMounted, computed } from 'vue';
+import VolumeSlider from '../components/VolumeSlider.vue';
+import ToggleButton from '../components/ToggleButton.vue';
+import LoginModal from '../components/LoginModal.vue';
+import { useLoginModalStore } from '@/stores/loginModal';
+import { useBgmStore } from '@/stores/bgm';
+import { useUserStore } from '@/stores/user';
+import { useRouter } from 'vue-router';
+
+const loginModalStore = useLoginModalStore();
+const bgmStore = useBgmStore();
+const userStore = useUserStore();
+const router = useRouter();
+
+const isLoginModalOpen = computed(() => loginModalStore.isOpen);
+
+const closeModal = () => {
+  loginModalStore.closeModal();
+};
+
+// 音源データのフェッチが完了したかどうかを示すステート
+const isAudioSourcesLoaded = ref(false);
+
+onMounted(async () => {
+  await Promise.all([bgmStore.fetchCafeMusic(), bgmStore.fetchBaristaSounds(), bgmStore.fetchPeopleTalking()]);
+  // 音源データのフェッチが完了したらフラグをセット
+  isAudioSourcesLoaded.value = true;
+});
+
+const handleChatToggle = async isChatActive => {
+  //chatがオン
+  if (isChatActive) {
+    const isUserLoggedIn = userStore.isLoggedIn; // ログインステータスの確認
+    if (isUserLoggedIn) {
+      router.push('/chat'); // チャットページにリダイレクト
+      // ユーザーがログインしていれば、chat_enabled ステータスをトグル
+      await userStore.toggleChatEnabled();
+    } else {
+      userStore.redirectAfterLogin = '/chat'; // リダイレクト先を設定
+      loginModalStore.openModal(); // ログインモーダルを表示
+    }
+  } else {
+    //chatボタンがオフになった場合
+    // ユーザーがログインしていれば、chat_enabled ステータスをトグル
+    if (userStore.isLoggedIn) {
+      await userStore.toggleChatEnabled();
+    }
+    router.push('/'); // チャットが非アクティブの場合、ホームにリダイレクト
+  }
+};
+</script>
+
 <template>
   <header>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -29,80 +82,6 @@
   </div>
   <LoginModal :isOpen="isLoginModalOpen" @close="closeModal" />
 </template>
-
-<script>
-import { ref, onMounted, computed } from 'vue';
-import VolumeSlider from '../components/VolumeSlider.vue';
-import ToggleButton from '../components/ToggleButton.vue';
-import LoginModal from '../components/LoginModal.vue';
-import { useLoginModalStore } from '@/stores/loginModal';
-import { useBgmStore } from '@/stores/bgm';
-import { useUserStore } from '@/stores/user';
-import { useRouter } from 'vue-router';
-
-export default {
-  components: {
-    VolumeSlider,
-    ToggleButton,
-    LoginModal
-  },
-  setup() {
-    const loginModalStore = useLoginModalStore();
-    const bgmStore = useBgmStore();
-    const userStore = useUserStore();
-    const router = useRouter(); // ルーティングのためのrouterインスタンスを取得
-
-    const isLoginModalOpen = computed(() => loginModalStore.isOpen);
-
-    // closeModal functionを更新
-    const closeModal = () => {
-      loginModalStore.closeModal(); // Pinia storeの状態も更新
-    };
-
-    // 音源データのフェッチが完了したかどうかを示すステート
-    const isAudioSourcesLoaded = ref(false);
-
-    // onMounted を非同期関数に変更
-    onMounted(async () => {
-      // Promise.all の結果を await で待つように修正
-      await Promise.all([bgmStore.fetchCafeMusic(), bgmStore.fetchBaristaSounds(), bgmStore.fetchPeopleTalking()]);
-      // 音源データのフェッチが完了したらフラグをセット
-      isAudioSourcesLoaded.value = true;
-    });
-
-    const handleChatToggle = async isChatActive => {
-      //chatがオン
-      if (isChatActive) {
-        const isUserLoggedIn = userStore.isLoggedIn; // ログインステータスの確認
-        if (isUserLoggedIn) {
-          router.push('/chat'); // チャットページにリダイレクト
-          // ユーザーがログインしていれば、chat_enabled ステータスをトグル
-          await userStore.toggleChatEnabled();
-        } else {
-          userStore.redirectAfterLogin = '/chat'; // リダイレクト先を設定
-          loginModalStore.openModal(); // ログインモーダルを表示
-        }
-      } else {
-        //chatボタンがオフになった場合
-        // ユーザーがログインしていれば、chat_enabled ステータスをトグル
-        if (userStore.isLoggedIn) {
-          await userStore.toggleChatEnabled();
-        }
-        router.push('/'); // チャットが非アクティブの場合、ホームにリダイレクト
-      }
-    };
-
-    return {
-      isLoginModalOpen,
-      openLoginModal: loginModalStore.openModal,
-      closeModal,
-      loginModalStore,
-      isAudioSourcesLoaded,
-      handleChatToggle
-    };
-  }
-};
-</script>
 
 <style scoped>
 .container {

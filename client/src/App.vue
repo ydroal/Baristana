@@ -1,11 +1,4 @@
-<template>
-  <div :style="[bgStyle, bgOverrideStyle]">
-    <Header />
-    <RouterView />
-  </div>
-</template>
-
-<script>
+<script setup>
 import { computed, onMounted } from 'vue';
 import { RouterView, useRoute } from 'vue-router';
 import { useUserStore } from '@/stores/user';
@@ -16,41 +9,39 @@ import bg2x from '@/assets/images/bg@2x.jpg';
 import bg3x from '@/assets/images/bg@3x.jpg';
 import bgMobile from '@/assets/images/bg-mobile@2x.jpg';
 
-export default {
-  components: {
-    Header
-  },
-  setup() {
-    const store = useUserStore();
-    const route = useRoute();  // 現在のルートを取得
+const store = useUserStore();
+const route = useRoute();
 
-    onMounted(async () => {
-      if (store.isJwtTokenExists()) {
-        await store.fetchUser();
-      }
-    });
-
-    const bgStyle = computed(() => ({
-      backgroundImage: window.innerWidth <= 820
-        ? `url(${bgMobile})`
-        : `url(${bg1x}), url(${bg2x}), url(${bg3x})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center'
-    }));
-
-    const bgOverrideStyle = computed(() => {
-      if (route.name === 'user-setting') {  // `route.name` を使用
-        return {
-          background: '#EFECE0'
-        };
-      }
-      return {};
-    });
-
-    return { bgStyle, bgOverrideStyle };
+onMounted(async () => {
+  if (store.isJwtTokenExists()) {
+    await store.fetchUser();
   }
-};
+});
+
+const bgStyle = computed(() => ({
+  backgroundImage: window.innerWidth <= 820
+    ? `url(${bgMobile})`
+    : `url(${bg1x}), url(${bg2x}), url(${bg3x})`,
+  backgroundSize: 'cover',
+  backgroundPosition: 'center'
+}));
+
+const bgOverrideStyle = computed(() => {
+  if (route.name === 'user-setting') {
+    return {
+      background: '#EFECE0'
+    };
+  }
+  return {};
+});
 </script>
+
+<template>
+  <div :style="[bgStyle, bgOverrideStyle]">
+    <Header />
+    <RouterView />
+  </div>
+</template>
 
 <style scoped>
 div {
@@ -59,5 +50,4 @@ div {
   height: 100%;
   overflow-y: auto;
 }
-
 </style>

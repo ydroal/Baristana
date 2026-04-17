@@ -4,6 +4,8 @@ const routes = require("./routes");
 const http = require("http");
 const socketIo = require("socket.io");
 const connection = require("./db");
+const jwt = require("jsonwebtoken");
+const secretKey = process.env.JWT_SECRET;
 // Expressモジュールを実体化して、定数appに代入
 const app = express();
 
@@ -28,15 +30,25 @@ const io = socketIo(server, {
     credentials: true,
   },
 });
-// 全ての接続中のユーザーのユーザーIDを格納するためのオブジェクト
-const socketToUserId = {};
 // アクティブなユーザー情報を保持する配列
 let activeUsers = [];
+
+// JWT認証ミドルウェア
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) return next(new Error("Unauthorized"));
+  jwt.verify(token, secretKey, (err, user) => {
+    if (err) return next(new Error("Unauthorized"));
+    socket.data.userId = user.id;
+    next();
+  });
+});
 
 // このインスタンス(io)はサーバーとしてlistenするオブジェクトとなる
 io.on("connection", (socket) => {
   // ユーザーが参加したとき
-  socket.on("user joined", (userId) => {
+  socket.on("user joined", () => {
+    const userId = socket.data.userId;
     // ユーザー情報をデータベースから取得
     const userQuery = "SELECT username FROM user WHERE id = ?";
     connection.query(userQuery, [userId], function (err, results, fields) {
@@ -56,14 +68,15 @@ io.on("connection", (socket) => {
     });
   });
 
-  // クライアントが初めて接続したときにloginイベントを発生させ、userIDを送信
-  socket.on("login", (userId) => {
-    socketToUserId[socket.id] = userId; // ユーザーIDをsocket.idと紐づけて保存
-  });
-
   // メッセージを受け取るためのイベントリスナーを設定
   socket.on("chat message", (msg) => {
-    const userId = socketToUserId[socket.id];
+    const now = Date.now();
+    if (now - (socket.data.lastMessageAt || 0) < 1000) {
+      socket.disconnect();
+      return;
+    }
+    socket.data.lastMessageAt = now;
+    const userId = socket.data.userId;
     if (userId) {
       // ここでデータベースにメッセージを保存
       const query =
@@ -98,6 +111,12 @@ io.on("connection", (socket) => {
   // 添付ファイルを受け取るためのイベントリスナーを設定
   const MAX_FILE_SIZE = 3; // MB
   socket.on("uploaded file", (file) => {
+    const now = Date.now();
+    if (now - (socket.data.lastMessageAt || 0) < 1000) {
+      socket.disconnect();
+      return;
+    }
+    socket.data.lastMessageAt = now;
       const fileSize = file.byteLength / 1024 ** 2;
     if (fileSize > MAX_FILE_SIZE) {
       console.error("File is too large");
@@ -108,7 +127,7 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const userId = socketToUserId[socket.id];
+    const userId = socket.data.userId;
     if (userId) {
       const query =
         "SELECT username, profile_picture_url FROM user WHERE id = ?";
@@ -134,13 +153,11 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     // ユーザーが切断したときにactiveUsersリストから削除
     activeUsers = activeUsers.filter(
-      (user) => user.userId !== socketToUserId[socket.id],
+      (user) => user.userId !== socket.data.userId,
     );
 
     // ユーザーデータの更新を通知
     io.emit("active users update", activeUsers);
-
-    delete socketToUserId[socket.id];
   });
 });
 
