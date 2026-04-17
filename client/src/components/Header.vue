@@ -1,17 +1,3 @@
-<template>
-  <header class="header">
-    <router-link :to="redirectTo"><img :src="logo" alt="Logo" class="logo" /></router-link>
-    <!-- <router-link to="/"><img :src="Logo" alt="Logo" class="logo" /></router-link> -->
-    <div class="right">
-      <button v-if="!isLoggedIn" @click="login" class="login-button">Log in</button>
-      <div v-else class="user_info">
-        <img :src="userIcon" alt="UserIcon" class="user_icon" @click="goToUserSetting" />
-        <button @click="logout" class="logout-button">Log out</button>
-      </div>
-    </div>
-  </header>
-</template>
-
 <script>
 import { ref, watch, computed } from 'vue';
 import { useLoginModalStore } from '@/stores/loginModal';
@@ -22,12 +8,6 @@ import UserIcon from '@/assets/images/icon_user.svg';
 
 export default {
   components: {},
-  // data() {
-  //   return {
-  //     Logo,
-  //     UserIcon
-  //   };
-  // },
   setup() {
     const logo = ref(Logo);
     const userIcon = ref(UserIcon);
@@ -72,29 +52,72 @@ export default {
 };
 </script>
 
+<template>
+  <header class="header">
+    <router-link :to="redirectTo"><img :src="logo" alt="Logo" class="logo" /></router-link>
+    <div class="right">
+      <button v-if="!isLoggedIn" @click="login" class="btn-primary">Log in</button>
+      <div v-else class="user_info">
+        <img :src="userIcon" alt="UserIcon" class="user_icon" @click="goToUserSetting" />
+        <button @click="logout" class="btn-primary logout-btn">Log out</button>
+      </div>
+    </div>
+  </header>
+</template>
+
 <style scoped>
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 10px 10px 30px 10px;
+  margin: 10px 20px 30px;
 }
 .right,
 .user_info {
   display: flex;
   align-items: center;
+  gap: 0.8rem; /* marginではなくgapで余白を一括管理（効率化） */
 }
+
 .logo {
-  /* width: 26.5%; */
-  width: 218px;
+  width: clamp(140px, 30vw, 218px);
   height: auto;
-  margin-left: 1.5%;
+  transition: opacity 0.2s;
 }
-.user_icon {
+
+.logo:hover {
+  opacity: 0.8;
+}
+
+.user-icon {
   height: 45px;
-  margin-bottom: 0.3rem;
+  width: 45px;
+  cursor: pointer;
+  border-radius: 50%;
+  object-fit: cover;
+  transition: opacity 0.2s ease;
 }
-.login-button,
+
+.user_icon:hover {
+  opacity: 0.8;
+}
+
+.user_icon:active {
+  transform: scale(0.95);
+}
+
+.btn-primary {
+  background-color: #232121;
+  color: #efece0;
+  font-weight: 300;
+  padding: 10px 20px;
+  border-radius: 60px;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap; /* テキストの改行防止 */
+}
+/* .login-button,
 .logout-button {
   background-color: #232121;
   width: 5rem;
@@ -105,66 +128,48 @@ export default {
   border-style: none;
   margin: 0 2rem 0.3rem 1rem;
   font-size: 0.9rem;
-}
+} */
 
-/* Medium devices (landscape phones, 576px and up) */
-@media (min-width: 576px) and (max-width: 767.98px) {
-  .logo {
-    width: 180px;
-    margin-left: 1.2%;
-  }
-  .login-button,
-  .logout-button {
-    width: 4.4rem;
-    font-size: 0.8rem;
-    padding: 8px 10px 8px 10px;
-    margin: 0 1rem 0.3rem 0.7rem;
-  }
-  .user_icon {
-    height: 38px;
-    margin-bottom: 0.3rem;
-  }
-}
-@media (min-width: 576px) and (max-width: 767.98px) and (orientation: landscape), (max-height: 418px) {
+@media (max-width: 820px) {
   .header {
-    margin-bottom: 0.6%;
+    margin: 8px 16px 16px;
   }
-  .logo {
-    width: 150px;
-    margin-left: 0;
-  }
-  .login-button,
-  .logout-button {
-    width: 3.7rem;
-    padding: 8px 10px 8px 10px;
-    font-size: 0.7rem;
-    margin: 0 0.5rem 0.5rem 0.5rem;
-  }
-  .user_icon {
-    height: 34px;
-    margin-bottom: 0.5rem;
-  }
-}
 
-/* Small devices (portrait phones, less than 576px) */
-@media (max-width: 575.98px) {
-  .header {
-    margin: 1% 1% 2% 1%;
+  .right,
+  .user-info {
+    gap: 0.5rem;
   }
-  .logo {
-    width: 150px;
-    margin-left: 0;
-  }
-  .login-button,
+
+  /* .login-button,
   .logout-button {
-    width: 3.7rem;
-    padding: 8px 10px 8px 10px;
-    font-size: 0.7rem;
-    margin: 0 0.5rem 0.5rem 0.5rem;
+    width: clamp(3.5rem, 15vw, 5rem);
+    font-size: clamp(0.75rem, 3vw, 0.9rem);
+    padding: 8px 10px;
+    margin: 0 0.5rem 0 0.5rem;
   }
   .user_icon {
-    height: 34px;
-    margin-bottom: 0.5rem;
+    height: clamp(32px, 8vw, 40px);
+    margin-bottom: 0;
+  } */
+}
+@media (max-width: 580px) {
+  .header {
+    margin: 8px 12px 12px;
+  }
+
+  .logout-btn {
+    display: none;
+  }
+
+  .user_info {
+    /* アイコンを押しやすくするため、余白を調整 */
+    gap: 0;
+  }
+
+  .user-icon {
+    height: 40px;
+    width: 40px;
+    cursor: pointer;
   }
 }
 </style>

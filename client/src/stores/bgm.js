@@ -10,14 +10,57 @@ export const useBgmStore = defineStore({
     cafe_music: [],
     barista_sounds: [],
     people_talking: [],
-    api: `${import.meta.env.VITE_APP_API_ENDPOINT}bgm/`
+    api: `${import.meta.env.VITE_APP_API_ENDPOINT}bgm/`,
+    players: {
+      'cafe-music': { audio: null, isPlaying: false, volume: 50, currentIndex: 0 },
+      'barista-sounds': { audio: null, isPlaying: false, volume: 50, currentIndex: 0 },
+      'people-talking': { audio: null, isPlaying: false, volume: 50, currentIndex: 0 }
+    }
   }),
   actions: {
+    _getUrls(type) {
+      const map = {
+        'cafe-music': this.cafe_music,
+        'barista-sounds': this.barista_sounds,
+        'people-talking': this.people_talking
+      };
+      return map[type] || [];
+    },
+    initPlayer(type) {
+      const player = this.players[type];
+      if (player.audio) return;
+      const urls = this._getUrls(type);
+      if (!urls.length) return;
+
+      player.audio = new Audio();
+      player.audio.crossOrigin = 'anonymous';
+      player.audio.src = urls[player.currentIndex];
+      player.audio.volume = player.volume / 100;
+      player.audio.onended = () => this.nextTrack(type);
+    },
+    togglePlay(type) {
+      const player = this.players[type];
+      if (!player.audio) return;
+      player.isPlaying = !player.isPlaying;
+      player.isPlaying ? player.audio.play() : player.audio.pause();
+    },
+    setVolume(type, vol) {
+      const player = this.players[type];
+      player.volume = vol;
+      if (player.audio) player.audio.volume = vol / 100;
+    },
+    nextTrack(type) {
+      const player = this.players[type];
+      const urls = this._getUrls(type);
+      player.currentIndex = (player.currentIndex + 1) % urls.length;
+      player.audio.src = urls[player.currentIndex];
+      player.audio.play();
+    },
     async fetchCafeMusic() {
       try {
         const res = await axios.get(`${this.api}cafe-music`);
-        console.log('cafe_music data:', res.data.urls);
         this.cafe_music = res.data.urls.map(url => url.replace(/ /g, '+'));
+        this.initPlayer('cafe-music');
       } catch (error) {
         console.error(error);
       }
@@ -25,8 +68,8 @@ export const useBgmStore = defineStore({
     async fetchBaristaSounds() {
       try {
         const res = await axios.get(`${this.api}barista-sounds`);
-        console.log('barista_sounds data:', res.data.urls);
         this.barista_sounds = res.data.urls.map(url => url.replace(/ /g, '+'));
+        this.initPlayer('barista-sounds');
       } catch (error) {
         console.error(error);
       }
@@ -34,50 +77,11 @@ export const useBgmStore = defineStore({
     async fetchPeopleTalking() {
       try {
         const res = await axios.get(`${this.api}people-talking`);
-        console.log('people_talking data:', res.data.urls);
         this.people_talking = res.data.urls.map(url => url.replace(/ /g, '+'));
+        this.initPlayer('people-talking');
       } catch (error) {
         console.error(error);
       }
     }
   }
 });
-
-// export const useBgmStore = defineStore('bgm', () => {
-//   const cafe_music = ref([]);
-//   const barista_sounds = ref([]);
-//   const people_talking = ref([]);
-//   const api = 'http://localhost:3000/api/bgm/';
-
-//   const actions = {
-//     async fetchCafeMusic() {
-//       try {
-//         const res = await axios.get(`${this.api}cafe-music`);
-//         console.log('cafe_music data:', res.data.urls);
-//         this.cafe_music = res.data.urls.map(url => url.replace(/ /g, '+'));
-//       } catch (error) {
-//         console.error(error);
-//       }
-//     },
-//     async fetchBaristaSounds() {
-//       try {
-//         const res = await axios.get(`${this.api}barista-sounds`);
-//         console.log('barista_sounds data:', res.data.urls);
-//         this.barista_sounds = res.data.urls.map(url => url.replace(/ /g, '+'));
-//       } catch (error) {
-//         console.error(error);
-//       }
-//     },
-//     async fetchPeopleTalking() {
-//       try {
-//         const res = await axios.get(`${this.api}people-talking`);
-//         console.log('people_talking data:', res.data.urls);
-//         this.people_talking = res.data.urls.map(url => url.replace(/ /g, '+'));
-//       } catch (error) {
-//         console.error(error);
-//       }
-//     }
-//   };
-//   return { cafe_music, barista_sounds, people_talking, api, actions }
-// });
-

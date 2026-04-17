@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-require('dotenv').config();
 
 const secretKey = process.env.JWT_SECRET;
 
@@ -13,7 +12,8 @@ const verifyToken = (req, res, next) => {
   }
   jwt.verify(token, secretKey, (err, user) => { // secretKeyは実際のJWT秘密鍵
     if (err) {
-      return res.status(500).send({ message: 'Failed to authenticate token.' });
+      console.error('JWT verification failed:', err.message);
+      return res.status(401).send({ message: 'Failed to authenticate token.' });
     }
     // ユーザー情報をreq.userに保存
     req.user = user;

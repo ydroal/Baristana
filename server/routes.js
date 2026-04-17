@@ -4,8 +4,6 @@ const express = require('express');
 // ルーター機能を導入
 const router = express.Router();
 const connection = require('./db');
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
 // OAuth2.0の認証を通す
 const { OAuth2Client } = require('google-auth-library');
 // JWTの作成・検証用library
@@ -16,8 +14,6 @@ const verifyToken = require('./verifyToken');
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 // multipart/form-data 形式のリクエストを扱う
 const multer = require('multer');
-// v2インポート：const AWS = require('aws-sdk');
-require('dotenv').config();
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const secretKey = process.env.JWT_SECRET;
@@ -36,76 +32,6 @@ const s3 = new S3Client({
   },
 });
 
-//v2のコード（AWSの認証情報を設定）
-// const s3 = new AWS.S3();
-// AWS.config.update({
-//   accessKeyId: process.env.AWS_ACCESS_KEY,
-//   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-//   region: process.env.S3_REGION
-// });
-
-//AWS認証情報が設定できてるか確認(v3ではこのメソッドはない)
-// s3.config.getCredentials(function(err) {
-//   if (err) {
-//     console.log("AWS接続Error");
-//   }else {
-//     console.log("AWS接続Success");
-//   }
-// });
-
-
-// セッションにユーザー情報を保存
-// passport.serializeUser((user, done) => {
-//   done(null, user.id);
-// });
-
-// passport.deserializeUser((id, done) => {
-//   // データベースからユーザーを検索
-//   const query = 'SELECT * FROM user WHERE google_id = ?';
-//   connection.query(query, id, (err, results) => {
-//     if (err) {
-//       return done(err);
-//     }
-//     if (!results.length) {
-//       return done(null, false);
-//     }
-//     return done(null, results[0]);
-//   });
-// });
-
-
-// passportとStrategyの紐づけ
-// passport.use(new GoogleStrategy({
-//   clientID: process.env.GOOGLE_CLIENT_ID,
-//   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-//   callbackURL: 'http://localhost:3000/api/auth/google/callback',
-// }, function(accessToken, refreshToken, profile, done) {
-//   process.nextTick(function() {
-//     // SQLクエリを作成　受け取ったユーザープロフィールデータをuserテーブルに挿入
-//     const query = 'INSERT INTO user (google_id, username, email, access_token, refresh_token, created_at) VALUES (?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE access_token = ?, username = ?, email = ?, refresh_token = ?';
-//     // paramsはSQLクエリに渡すパラメータの配列。クエリ内の?が置換される
-//     const params = [
-//       profile.id,
-//       profile.displayName,
-//       profile.emails[0].value,
-//       accessToken,
-//       refreshToken,
-//       accessToken,
-//       profile.displayName,
-//       profile.emails[0].value,
-//       refreshToken
-//     ];
-    
-//     // SQLクエリを実行
-//     connection.query(query, params, function(error, results) {
-//       if (error) {
-//         return done(error);
-//       }
-//       const user = results[0];
-//       return done(null, user);
-//     });
-//   });
-// }));
 
 router.get('/bgm/:category', (req, res) => {
   // カテゴリをURLパラメータから取得
@@ -114,9 +40,6 @@ router.get('/bgm/:category', (req, res) => {
   const query = "SELECT file_url FROM bgm WHERE file_url LIKE CONCAT('%', ?, '%')";
 
   connection.query(query, category, (error, results) => {
-    console.log('query:', query);
-    console.log('category:', category);
-    console.log('results:', results);
     if (error) {
       // エラー処理
       res.status(500).send('An error occurred while fetching the BGM URL.');
@@ -136,23 +59,11 @@ router.get('/bgm/:category', (req, res) => {
 });
 
 
-// ユーザーをGoogleのログインページにリダイレクトする（不要）
-// router.get('/auth/google', passport.authenticate('google', {
-  //   scope: ['profile', 'email']
-  // }));
-  
-  // Googleから認証コードを受け取り、その認証コードを用いてアクセストークンを取得する
-  // router.get('/auth/google/callback', passport.authenticate('google', {
-    //   successRedirect: 'http://localhost:5173', //ログイン成功時のリダイレクト先
-    //   failureRedirect: 'http://localhost:5173' // // ログイン失敗時のリダイレクト先
-    // }));
-    
 const client = new OAuth2Client(CLIENT_ID);  // Google API Consoleで取得したクライアントID
     
 // フロントエンドからのIDトークンを受け取る
 router.post('/auth/google/onetap', async (req, res) => {
   const idToken = req.body.idToken;
-  console.log('Received ID token:', idToken);
 
   try {
     // IDトークンを検証し、検証が成功したらユーザーを認証する処理
@@ -250,17 +161,7 @@ router.get('/auth/user', verifyToken, (req, res) => {
   }
 });
 
-// ログアウト（公式からコピーしたコード。POST＆コールバックが必要？）
-// router.post('/auth/logout', function(req, res, next) {
-//   req.logout(function(err) {
-//     if (err) { 
-//       return next(err); 
-//     }
-//     res.sendStatus(200);
-//   });
-// });
-
-// 新ログアウト
+// ログアウト
 router.post('/auth/logout', verifyToken, (req, res, next) => {
   // req.user には verifyTokenミドルウェアにより認証されたユーザー情報が格納されている
   const userId = req.user.id;
@@ -269,8 +170,6 @@ router.post('/auth/logout', verifyToken, (req, res, next) => {
   const query = `DELETE FROM active_user WHERE user_id = ?`;
   connection.query(query, [userId], function (error, results, fields) {
     if (error) throw error;
-    // レコードの削除が成功したらHTTP 200を返す
-    console.log('レコード削除したよ');
     res.sendStatus(200);
   });
 });
@@ -284,7 +183,6 @@ router.put('/active_user/:id/chat_enabled', verifyToken, (req, res) => {
   const sql = 'UPDATE active_user SET chat_enabled = ? WHERE user_id = ?';
   connection.query(sql, [chatEnabled, userId], (err, results) => {
     if (err) {
-      console.log(err);
       return res.status(500).send({message: 'Database update failed.'});
     }
     res.send({message: 'Chat status updated successfully.'});
@@ -297,14 +195,12 @@ router.get('/user/:id', verifyToken, async (req, res) => {
     const query = `SELECT username, email, profile_picture_url FROM user WHERE id = ?`;
     connection.query(query, [req.params.id], (err, results) => {
       if (err) {
-        console.log(err); 
         return res.status(500).json({ message: 'Error in Fetching user' });
       }
       res.json(results);
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: 'Server error' }); 
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -320,9 +216,7 @@ const uploadFile = async (req) => {
   });
 
   try {
-    const response = await s3.send(command);
-    console.log(response);
-    console.log('uploaded to s3!');
+    await s3.send(command);
   } catch (err) {
     console.error(err);
   }
@@ -358,17 +252,4 @@ router.put('/user/:userId', (req, res) => {
     res.send('User name updated 成功');
   });
 });
-// router.put('/user/:userId', upload.single('icon'), (req, res) => {
-//   // iconがあれば、uploadメソッドでreq.fileに格納されている
-//   if (req.file) {
-//     uploadFile(req);
-//   }
-//   const query = `UPDATE user SET username = ?, profile_picture_url = ? WHERE id = ?`;
-//   let params = [req.body.username, req.body.profile_picture_url, req.params.userId];
-//   connection.query(query, params, (err, result) => {
-//     if (err) throw err;
-//     res.send('User updated 成功');
-//   });
-// });
-
 module.exports = router;

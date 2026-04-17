@@ -6,7 +6,11 @@
   </header>
 
   <div class="container">
-    <h1>Create Your Own Cafe Experience</h1>
+    <h1>
+      Create Your
+      <br class="br-for-mobile" />
+      Own Cafe Experience
+    </h1>
     <p>
       Baristana is an application that brings the fun times we spend in cafes,
       <span class="br-for-desktop"></span>
@@ -14,13 +18,10 @@
       <span class="br-for-desktop"></span>
       and the cozy atmosphere with cafe sound. right to your own home.
     </p>
-    <!-- <pre>{{ cafeMusic }}</pre>
-    <pre>{{ baristaSounds }}</pre>
-    <pre>{{ peopleTalking }}</pre> -->
     <div class="volume_slider" v-if="isAudioSourcesLoaded">
-      <VolumeSlider soundType="Cafe music" :audioSources="cafeMusic" />
-      <VolumeSlider soundType="Barista sounds" :audioSources="baristaSounds" />
-      <VolumeSlider soundType="People talking" :audioSources="peopleTalking" />
+      <VolumeSlider soundType="Cafe music" />
+      <VolumeSlider soundType="Barista sounds" />
+      <VolumeSlider soundType="People talking" />
       <div class="toggle_button">
         <ToggleButton @toggle-chat="handleChatToggle" />
       </div>
@@ -30,7 +31,7 @@
 </template>
 
 <script>
-import { ref, watchEffect, onMounted, computed } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import VolumeSlider from '../components/VolumeSlider.vue';
 import ToggleButton from '../components/ToggleButton.vue';
 import LoginModal from '../components/LoginModal.vue';
@@ -51,13 +52,7 @@ export default {
     const userStore = useUserStore();
     const router = useRouter(); // ルーティングのためのrouterインスタンスを取得
 
-    // Vueのrefを作成
-    const isLoginModalOpen = ref(loginModalStore.$state.isOpen);
-
-    // モーダルの状態変化を監視
-    watchEffect(() => {
-      isLoginModalOpen.value = loginModalStore.$state.isOpen;
-    });
+    const isLoginModalOpen = computed(() => loginModalStore.isOpen);
 
     // closeModal functionを更新
     const closeModal = () => {
@@ -76,7 +71,6 @@ export default {
     });
 
     const handleChatToggle = async isChatActive => {
-      console.log('index Page:handleChatToggle called with:', isChatActive);
       //chatがオン
       if (isChatActive) {
         const isUserLoggedIn = userStore.isLoggedIn; // ログインステータスの確認
@@ -88,7 +82,8 @@ export default {
           userStore.redirectAfterLogin = '/chat'; // リダイレクト先を設定
           loginModalStore.openModal(); // ログインモーダルを表示
         }
-      } else { //chatボタンがオフになった場合
+      } else {
+        //chatボタンがオフになった場合
         // ユーザーがログインしていれば、chat_enabled ステータスをトグル
         if (userStore.isLoggedIn) {
           await userStore.toggleChatEnabled();
@@ -102,9 +97,6 @@ export default {
       openLoginModal: loginModalStore.openModal,
       closeModal,
       loginModalStore,
-      cafeMusic: computed(() => bgmStore.cafe_music),
-      baristaSounds: computed(() => bgmStore.barista_sounds),
-      peopleTalking: computed(() => bgmStore.people_talking),
       isAudioSourcesLoaded,
       handleChatToggle
     };
@@ -152,56 +144,76 @@ p {
 .br-for-desktop {
   display: none;
 }
+.br-for-mobile {
+  display: none;
+}
 
-@media (min-width: 768px) {
+@media (min-width: 821px) {
   .br-for-desktop {
     display: block;
   }
 }
-@media (min-width: 768px) and (max-width: 980px) and (min-height: 850px) {
+
+@media (max-width: 820px) {
+  .container {
+    width: 90%;
+    padding: 3rem 1rem 2rem;
+    align-items: center;
+  }
   h1 {
-    margin-top: 20%;
+    font-size: clamp(2rem, 8vw, 2.8rem);
+    margin-top: 4%;
+    text-align: center;
+    letter-spacing: 0.04em;
+    width: 100%;
   }
   p {
-    margin-bottom: 10%;
+    text-align: left;
+    font-size: clamp(0.8rem, 3.5vw, 1rem);
+    margin-bottom: 6%;
+    width: 70%;
+  }
+  .volume_slider {
+    width: 70%;
+    margin-top: 5rem;
+    align-items: flex-start;
+  }
+  .toggle_button {
+    position: static;
+    margin-top: 0;
   }
 }
 
-/* Medium devices (landscape phones, 576px and up) */
-@media (min-width: 576px) and (max-width: 767.98px) {
-  p {
-    margin-bottom: 6%;
-  }
-}
-@media (min-width: 576px) and (max-width: 767.98px) and (orientation: landscape), (max-height: 418px) {
+@media (max-width: 580px) {
   h1 {
-    font-size: 1.7rem;
-    margin-top: 0;
-  }
-  p {
-    margin-bottom: 1%;
-    font-size: 0.7rem;
-  }
-  .volume_slider {
-    margin-top: 1%;
-  }
-}
-/* Small devices (portrait phones, less than 576px) */
-@media (max-width: 575.98px) {
-  h1 {
-    font-size: 2.1rem;
-    margin-top: 12%;
-  }
-  .slider {
-    width: 200px;
-  }
-  p {
-    font-size: 0.8rem;
-    margin-bottom: 5%;
+    font-size: clamp(1.4rem, 6.5vw, 1.8rem);
     text-align: center;
+    letter-spacing: 0.04em;
+    width: 100%;
+  }
+  .br-for-mobile {
+    display: block;
+  }
+  p {
+    width: 100%;
   }
   .volume_slider {
-    margin-top: 8%;
+    width: 100%;
+    margin-top: 2rem;
+  }
+}
+
+@media (max-width: 820px) and (orientation: landscape) {
+  h1 {
+    font-size: clamp(1.5rem, 5vw, 2rem);
+    margin-top: 2%;
+  }
+  p {
+    font-size: clamp(0.7rem, 2.5vw, 0.9rem);
+    margin-bottom: 2%;
+  }
+  .volume_slider {
+    margin-top: 2%;
   }
 }
 </style>
