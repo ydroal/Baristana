@@ -122,7 +122,7 @@ io.on("connection", (socket) => {
       console.error("File is too large");
       socket.emit("upload error", {
         message:
-          "File is too large. Maximum allowed size is ${MAX_FILE_SIZE} MB",
+          `File is too large. Maximum allowed size is ${MAX_FILE_SIZE} MB`,
       }); //ファイル送信者にのみ送信
       return;
     }
