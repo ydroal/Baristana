@@ -153,3 +153,44 @@ describe('PUT /api/user/:userId/icon', () => {
       .end(done);
   });
 });
+
+// ─── GET /api/user/:id（ユーザー情報取得）────────────────────────────────────
+describe('GET /api/user/:id', () => {
+  test('トークンなし → 403', done => {
+    request(app).get('/api/user/1').expect(403).end(done);
+  });
+
+  test('他人のID（IDOR） → 403', done => {
+    const token = generateToken(1);
+    request(app)
+      .get('/api/user/999')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403)
+      .end(done);
+  });
+
+  test('本人のID → 200 + ユーザーデータ', done => {
+    const token = generateToken(1);
+    db.query.mockImplementation((sql, params, cb) =>
+      cb(null, [{ username: 'yoko', email: 'y@example.com', profile_picture_url: 'avatar.png' }])
+    );
+    request(app)
+      .get('/api/user/1')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200)
+      .expect(res => {
+        expect(res.body[0].username).toBe('yoko');
+      })
+      .end(done);
+  });
+
+  test('本人のID + DBエラー → 500', done => {
+    const token = generateToken(1);
+    db.query.mockImplementation((sql, params, cb) => cb(new Error('DB error'), null));
+    request(app)
+      .get('/api/user/1')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(500)
+      .end(done);
+  });
+});

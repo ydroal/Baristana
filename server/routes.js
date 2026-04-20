@@ -194,6 +194,7 @@ router.put('/active_user/:id/chat_enabled', verifyToken, (req, res) => {
 
 // ユーザー情報取得(user-settingページ用）エンドポイント
 router.get('/user/:id', verifyToken, async (req, res) => {
+  if (String(req.user.id) !== String(req.params.id)) return res.status(403).json({ message: 'Forbidden' });
   try {
     const query = `SELECT username, email, profile_picture_url FROM user WHERE id = ?`;
     connection.query(query, [req.params.id], (err, results) => {
