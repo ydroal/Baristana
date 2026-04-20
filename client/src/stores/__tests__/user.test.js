@@ -65,6 +65,41 @@ describe('logout()', () => {
     expect(store.user).toBeNull();
     expect(localStorage.getItem('jwt')).toBeNull();
   });
+
+  test('API失敗 → user は変わらない、localStorage の jwt も残る', async () => {
+    localStorage.setItem('jwt', 'token123');
+    axiosInstance.post.mockRejectedValue(new Error('Network Error'));
+    const store = useUserStore();
+    store.user = { id: 1, username: 'yoko' };
+    store.logout();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(store.user).toEqual({ id: 1, username: 'yoko' });
+    expect(localStorage.getItem('jwt')).toBe('token123');
+  });
+});
+
+describe('isLoggedIn getter', () => {
+  test('user が null → false', () => {
+    const store = useUserStore();
+    expect(store.isLoggedIn).toBe(false);
+  });
+
+  test('user がオブジェクト → true', () => {
+    const store = useUserStore();
+    store.user = { id: 1, username: 'yoko' };
+    expect(store.isLoggedIn).toBe(true);
+  });
+
+  test('getUser: user が null → null を返す', () => {
+    const store = useUserStore();
+    expect(store.getUser).toBeNull();
+  });
+
+  test('getUser: user がオブジェクト → user を返す', () => {
+    const store = useUserStore();
+    store.user = { id: 1, username: 'yoko' };
+    expect(store.getUser).toEqual({ id: 1, username: 'yoko' });
+  });
 });
 
 describe('toggleChatEnabled()', () => {

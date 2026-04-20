@@ -31,6 +31,9 @@ describe('GET /api/auth/user', () => {
       .get('/api/auth/user')
       .set('Authorization', `Bearer ${token}`)
       .expect(200)
+      .expect(res => {
+        expect(res.body).toMatchObject({ id: 1 });
+      })
       .end(done);
   });
 
@@ -67,7 +70,7 @@ describe('PUT /api/active_user/:id/chat_enabled', () => {
       .end(done);
   });
 
-  test('本人のID → 200', done => {
+  test('本人のID → 200 + メッセージ', done => {
     const token = generateToken(1);
     db.query.mockImplementation((sql, params, cb) => cb(null, { affectedRows: 1 }));
     request(app)
@@ -75,6 +78,9 @@ describe('PUT /api/active_user/:id/chat_enabled', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ chat_enabled: true })
       .expect(200)
+      .expect(res => {
+        expect(res.body).toHaveProperty('message');
+      })
       .end(done);
   });
 });
