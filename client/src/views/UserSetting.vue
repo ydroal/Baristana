@@ -1,407 +1,318 @@
+<script setup>
+import { ref, computed, onMounted, watch } from 'vue';
+import { storeToRefs } from 'pinia';
+import axiosInstance from '@/axios';
+import { useUserStore } from '@/stores/user';
+import { useRouter } from 'vue-router';
+import UserIcon2 from '@/assets/images/icon_user2.svg';
+
+const api = import.meta.env.VITE_APP_API_ENDPOINT;
+const userStore = useUserStore();
+const { isLoggedIn } = storeToRefs(userStore);
+const router = useRouter();
+
+// --- リアクティブデータ ---
+const userInfo = ref({ username: '', email: '', profile_picture_url: '' });
+const initialUserInfo = ref({ username: '', email: '', profile_picture_url: '' });
+const editMode = ref(false);
+const selectedFile = ref(null);
+const previewImageUrl = ref(null);
+
+const userId = computed(() => userStore.getUser?.id ?? null);
+
+const logout = async () => {
+  await userStore.logout();
+  router.push('/');
+};
+
+// --- 関数: データ取得 ---
+const fetchUserData = async () => {
+  if (!userId.value) return;
+
+  try {
+    const response = await axiosInstance.get(`${api}user/${userId.value}`);
+    const data = response.data[0];
+
+    if (data.profile_picture_url) {
+      const s3_bucket = import.meta.env.VITE_APP_BUCKET_NAME;
+      const s3_region = import.meta.env.VITE_APP_S3_REGION;
+      const obj_key = `${import.meta.env.VITE_APP_S3_OBJ_ICONS}/${data.profile_picture_url}`;
+      data.profile_picture_url = `https://${s3_bucket}.s3.${s3_region}.amazonaws.com/${obj_key}`;
+    }
+
+    userInfo.value = data;
+    initialUserInfo.value = { ...data };
+  } catch (error) {
+    console.error('Fetch Error:', error);
+    userInfo.value = { username: '', email: '', profile_picture_url: '' };
+  }
+};
+
+const onFileChange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  selectedFile.value = file;
+  previewImageUrl.value = URL.createObjectURL(file);
+};
+
+const edit = () => {
+  editMode.value = true;
+};
+
+const cancelEdit = () => {
+  editMode.value = false;
+  userInfo.value = { ...initialUserInfo.value };
+  selectedFile.value = null;
+  previewImageUrl.value = null;
+};
+
+const update = async () => {
+  try {
+    editMode.value = false;
+
+    // 名前変更の検知と送信
+    if (userInfo.value.username !== initialUserInfo.value.username) {
+      await axiosInstance.put(`${api}user/${userId.value}`, {
+        username: userInfo.value.username
+      });
+    }
+
+    // アイコン変更の送信
+    if (selectedFile.value) {
+      const updateFileUrl = `${userId.value}-${Date.now()}-${selectedFile.value.name}`;
+      const formData = new FormData();
+      formData.append('icon', selectedFile.value);
+      formData.append('profile_picture_url', updateFileUrl);
+
+      const response = await axiosInstance.put(`${api}user/${userId.value}/icon`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      userInfo.value.profile_picture_url = response.data.updated_profile_picture_url;
+    }
+
+    initialUserInfo.value = { ...userInfo.value };
+  } catch (error) {
+    console.error('Update Error:', error);
+  }
+};
+
+onMounted(fetchUserData);
+</script>
+
 <template>
   <div class="user-setting">
     <div class="user-setting_card">
       <div class="user-setting_icon">
         <input id="file-input" type="file" @change="onFileChange" :disabled="!editMode" style="display: none" />
-        <div class="preview-image" v-if="editMode && selectedFile">
-          <img :src="previewImageUrl || userInfo.profile_picture_url || UserIcon2" alt="Preview" class="preview-icon" />
-        </div>
-        <!-- <label for="file-input"> -->
-        <label for="file-input" v-if="!selectedFile || !editMode">
-          <img :src="userInfo.profile_picture_url || UserIcon2" alt="UserIcon" class="user_icon" />
+        <label for="file-input" class="icon-label">
+          <img
+            :src="
+              editMode && selectedFile
+                ? previewImageUrl || userInfo.profile_picture_url
+                : userInfo.profile_picture_url || UserIcon2
+            "
+            alt="UserIcon"
+            class="user_icon_img"
+          />
         </label>
       </div>
+
       <h2 class="user-setting_title">My account</h2>
-      <hr />
-      <div class="user-setting_text">
-        <p class="user-setting_text_title">User name</p>
-        <p class="user-setting_text_sub">This will be displayed throughout this website</p>
-        <input
-          class="user-setting_input"
-          type="text"
-          :disabled="!editMode"
-          v-if="userInfo"
-          v-model="userInfo.username"
-        />
+      <hr class="divider" />
+
+      <div class="user-setting_form">
+        <div class="user-setting_text">
+          <p class="user-setting_text_title">User name</p>
+          <p class="user-setting_text_sub">This will be displayed throughout this website</p>
+          <input class="user-setting_input" type="text" :disabled="!editMode" v-model="userInfo.username" />
+        </div>
+
+        <div class="user-setting_text">
+          <p class="user-setting_text_title">Email</p>
+          <p class="user-setting_text_sub attention">Note: Display only. Registered email cannot be changed</p>
+          <input class="user-setting_input" type="text" disabled v-model="userInfo.email" />
+        </div>
+
+        <div class="mobile-logout-wrapper" v-if="isLoggedIn">
+          <hr class="mobile-divider" />
+          <button @click="logout" class="user-setting_logout-text">Log out</button>
+        </div>
       </div>
-      <div class="user-setting_text">
-        <p class="user-setting_text_title">Email</p>
-        <p class="user-setting_text_sub attention">Note: Display only. Registered email cannot be changed</p>
-        <input class="user-setting_input" type="text" disabled v-model="userInfo.email" />
-      </div>
+
       <div class="buttons">
-        <button @click="edit" class="user-setting_edit-button" v-if="!editMode">Edit</button>
-        <button @click="update" class="user-setting_edit-button" v-if="editMode">Update</button>
-        <button @click="cancelEdit" class="user-setting_cancel-button" v-if="editMode">Cancel</button>
+        <button @click="edit" class="btn btn-edit" v-if="!editMode">Edit</button>
+        <button @click="update" class="btn btn-edit" v-if="editMode">Update</button>
+        <button @click="cancelEdit" class="btn btn-cancel" v-if="editMode">Cancel</button>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-// import axios from 'axios';
-import axiosInstance from '@/axios';
-import { ref, computed, onMounted, watch } from 'vue';
-import { useUserStore } from '@/stores/user';
-import UserIcon2 from '@/assets/images/icon_user2.svg';
-
-export default {
-  setup() {
-    const api = import.meta.env.VITE_APP_API_ENDPOINT;
-    const userStore = useUserStore();
-    const userId = computed(() => (userStore.getUser ? userStore.getUser.id : null));
-
-    let userInfo = ref({ username: '', email: '', profile_picture_url: '' });
-    let initialUserInfo = ref({ username: '', email: '', profile_picture_url: '' });
-    let editMode = ref(false); // 編集モードを管理するためのref
-    let selectedFile = ref(null); // 選択された画像ファイルを保持するための変数
-    let previewImageUrl = ref(null);
-
-    onMounted(async () => {
-      console.log('userStore.getUser: ', userStore.getUser);
-      if (userStore.getUser) {
-        console.log('userStore.getUser.id: ', userStore.getUser.id);
-      }
-      try {
-        console.log('userId: ', userId.value);
-        const response = await axiosInstance.get(`${api}user/${userId.value}`);
-        userInfo.value = response.data[0];
-        initialUserInfo.value = { ...response.data[0] }; // ユーザー情報を初期状態として保存。要深いコピー
-
-        if (userInfo.value.profile_picture_url) {
-          const s3_bucket_name = import.meta.env.VITE_APP_BUCKET_NAME;
-          const s3_region = import.meta.env.VITE_APP_S3_REGION;
-          const obj_key = `${import.meta.env.VITE_APP_S3_OBJ_ICONS}/${userInfo.value.profile_picture_url}`;
-          userInfo.value.profile_picture_url = `https://${s3_bucket_name}.s3.${s3_region}.amazonaws.com/${obj_key}`;
-        }
-        console.log('Received full user data: ', response.data);
-      } catch (error) {
-        userInfo.value = { username: '', email: '', profile_picture_url: '' }; // ユーザー情報が取得できなかった場合にはnullを設定
-        initialUserInfo.value = { username: '', email: '', profile_picture_url: '' }; // 初期状態も同様に設定
-        console.error(error);
-        console.error(error);
-      }
-    });
-
-    // 選択された画像のプレビューを表示
-    const onFileChange = e => {
-      selectedFile.value = e.target.files[0];
-      previewImageUrl.value = URL.createObjectURL(selectedFile.value); //オブジェクトURLを作成
-    };
-
-    const cancelEdit = () => {
-      editMode.value = false;
-      userInfo.value = { ...initialUserInfo.value }; // 初期状態に戻す
-      selectedFile.value = null;
-      previewImageUrl.value = null;
-    };
-
-    const edit = () => {
-      editMode.value = true;
-    };
-
-    const update = async () => {
-      editMode.value = false;
-      if (userInfo.value.username !== initialUserInfo.value.username) {
-        // axiosのPUTは第二引数に渡すデータはオブジェクト形式
-        await axiosInstance.put(`${api}user/${userId.value}`, {
-          username: userInfo.value.username
-        });
-      }
-      // 選択された画像ファイルがあればサーバーに送信する
-      if (selectedFile.value) {
-        let updateFileUrl = `${userId.value}-${Date.now()}-${selectedFile.value.name}`;
-        console.log(updateFileUrl);
-        const formData = new FormData();
-        formData.append('icon', selectedFile.value);
-        formData.append('profile_picture_url', updateFileUrl);
-        const response = await axiosInstance.put(`${api}user/${userId.value}/icon`, formData, {
-          headers: {
-            // 画像をポストする場合の通信形式は multipart/form-data
-            'Content-Type': 'multipart/form-data'
-            // 'X-HTTP-Method-Override': 'PUT', // PUTに置き換える記述を書く
-          }
-        });
-        // レスポンスから新しい画像のURLを取得して、userInfoのデータを更新する
-        userInfo.value.profile_picture_url = response.data.updated_profile_picture_url;
-      }
-      // ユーザー情報の更新後、初期状態を再設定する
-      initialUserInfo.value = { ...userInfo.value };
-    };
-
-    // editModeの値が変わったときにファイル選択を有効/無効にする
-    watch(editMode, newValue => {
-      const fileInput = document.getElementById('file-input');
-      if (newValue) {
-        fileInput.removeAttribute('disabled');
-      } else {
-        fileInput.setAttribute('disabled', 'disabled');
-      }
-    });
-
-    return {
-      api,
-      userStore,
-      UserIcon2,
-      userId,
-      userInfo,
-      editMode,
-      selectedFile,
-      previewImageUrl,
-      cancelEdit,
-      edit,
-      update,
-      onFileChange
-    };
-  }
-};
-</script>
-
 <style scoped>
+/* 1. Base Structure (1440px+) */
 .user-setting {
   display: flex;
   justify-content: center;
+  padding: 80px 20px;
+  min-height: 100vh;
 }
 
 .user-setting_card {
   background-color: #e4af63;
   border-radius: 20px;
-  width: 48%;
-  height: 68%;
+  width: 100%;
+  max-width: 600px; /* PCでの最大幅を固定し安定させる */
   position: relative;
   display: flex;
-  align-items: center;
   flex-direction: column;
-  justify-content: center;
-  margin-top: 4%;
+  padding: 60px 40px 20px; /* 上部にアイコンが被る余白を確保 */
+  align-self: flex-start;
+  margin-top: 60px;
 }
 
+/* アイコン：欠け防止のため z-index と overflow を調整 */
 .user-setting_icon {
   background-color: white;
   border-radius: 50%;
   width: 124px;
   height: 124px;
   position: absolute;
-  top: -62px; /* 円の半分を外に出す */
-  left: calc(50% - 62px); /* 左辺を親要素の左辺から中央（50%）に配置、さらに62px左にオフセット */
-  overflow: hidden;
-}
-.user_icon,
-.preview-icon {
-  position: absolute;
-  top: 50%;
+  top: -62px;
   left: 50%;
+  transform: translateX(-50%);
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.user_icon_img {
   width: 100%;
-  transform: translate(-50%, -50%);
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-setting_title {
-  align-self: flex-start;
-  margin-top: 4rem;
-  margin-left: 1rem;
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 500;
   color: #efece0;
+  margin-bottom: 0.5rem;
 }
-hr {
+
+.divider {
   width: 100%;
   border: 0.5px solid #efece0;
-  margin-top: 0.5rem;
-  margin-bottom: 10%;
+  margin-bottom: 2rem;
 }
+
+.user-setting_form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .user-setting_text {
-  color: #efece0;
-  margin-bottom: 4%;
-  width: 50%;
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 1.5rem;
 }
-.user-setting_text_title {
-  font-size: 0.7rem;
-  font-weight: 500;
-  color: #efece0;
-  margin-left: 0.3rem;
-}
+
+.user-setting_text_title,
 .user-setting_text_sub {
-  font-size: 0.7rem;
-  font-weight: 200;
+  font-size: 0.75rem;
   color: #efece0;
-  margin-top: 0.3rem;
-  margin-left: 0.3rem;
 }
+
 .attention {
   color: #37604b;
-  font-weight: 400;
+  font-weight: 600;
 }
 
 .user-setting_input {
   width: 100%;
-  height: 2.2rem;
-  border-radius: 13px;
+  height: 2.5rem;
+  border-radius: 12px;
   background-color: #efecdf;
-  margin-top: 0.4rem;
   border: none;
-  padding: 0 10px;
-  color: #232121;
-  font-weight: 300;
-  font-size: 0.8rem;
+  padding: 0 15px;
+  margin-top: 0.5rem;
 }
-.user-setting_input:focus {
-  outline: none;
-  border: 4px solid #fff;
-}
+
+/* ボタン系 */
 .buttons {
   display: flex;
   justify-content: flex-end;
-  width: 100%;
+  gap: 10px;
+  margin-top: 1rem;
 }
 
-.user-setting_edit-button,
-.user-setting_cancel-button {
-  background-color: #232121;
-  width: 86px;
-  color: #efece0;
-  font-weight: 300;
-  padding: 10px 12px 10px 12px;
+.btn {
+  padding: 10px 24px;
   border-radius: 60px;
-  border-style: none;
-  margin: 2rem 1.3rem 1.3rem 0;
+  border: none;
   font-size: 0.9rem;
-  align-self: flex-end;
+  cursor: pointer;
+  background-color: #232121;
+  color: #efece0;
 }
-@media (min-height: 850px) {
-  .user-setting_card {
-    width: 75%;
-    height: 60vh;
-    margin-top: 16%;
-  }
-  .user-setting_title {
-    margin-top: 0;
-  }
+
+/* モバイルログアウト（デフォルト非表示） */
+.mobile-logout-wrapper {
+  display: none;
 }
-@media (max-height: 418px) {
-  .user-setting {
-    overflow: auto;
-  }
-  .user-setting_title {
-    margin-top: 1rem;
-  }
-  hr {
-    margin-bottom: 5%;
-  }
+
+/* 2. Responsive: 820px (Tablet) */
+@media (max-width: 820px) {
   .user-setting_card {
-    width: 75%;
-    height: 450px;
-    position: relative;
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    justify-content: center;
-    margin-top: 10%;
-  }
-  .user-setting_text {
-    color: #efece0;
-    margin-bottom: 4%;
-    width: 60%;
-  }
-  .user-setting_edit-button,
-  .user-setting_cancel-button {
-    width: 4.4rem;
-    color: #efece0;
-    padding: 8px 10px 8px 10px;
-    margin: 0 1.3rem 1.3rem 0;
-    font-size: 0.8rem;
+    max-width: 500px;
+    margin-top: 80px;
   }
 }
 
-@media (min-width: 576px) and (max-width: 767.98px) {
-  .user-setting_card {
-    width: 75%;
-    height: 72vh;
-    position: relative;
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    justify-content: center;
-    margin-top: 10%;
-  }
-  .user-setting_text {
-    color: #efece0;
-    margin-bottom: 4%;
-    width: 60%;
-  }
-  .user-setting_edit-button,
-  .user-setting_cancel-button {
-    width: 4.4rem;
-    color: #efece0;
-    padding: 8px 10px 8px 10px;
-    margin: 2rem 1.3rem 1.3rem 0;
-    font-size: 0.8rem;
-  }
-}
-@media (min-width: 576px) and (max-width: 767.98px) and (max-height: 418px) {
-  .user-setting {
-    overflow: auto;
-  }
-  .user-setting_title {
+/* 3. Responsive: 393px / 360px (Mobile) */
+@media (max-width: 580px) {
+  /* 前のHeaderと合わせる */
+  .mobile-logout-wrapper {
+    display: block;
+    width: 100%;
+    max-width: 400px;
     margin-top: 1rem;
+    text-align: center;
   }
-  hr {
-    margin-bottom: 5%;
+  .mobile-divider {
+    border: 0.5px solid rgba(239, 236, 224, 0.5);
+    margin-bottom: 1rem;
   }
+  .user-setting_logout-text {
+    background: none;
+    border: none;
+    color: #37604b; /* ログアウトは少し色を変えて注意を引く */
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
   .user-setting_card {
-    width: 75%;
-    height: 450px;
-    position: relative;
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    justify-content: center;
-    margin-top: 10%;
+    padding: 60px 20px 20px;
+    width: 90%;
   }
-  .user-setting_text {
-    color: #efece0;
-    margin-bottom: 4%;
-    width: 60%;
-  }
-  .user-setting_edit-button,
-  .user-setting_cancel-button {
-    width: 4.4rem;
-    color: #efece0;
-    padding: 8px 10px 8px 10px;
-    margin: 0 1.3rem 1.3rem 0;
-    font-size: 0.8rem;
-  }
-}
-/* Small devices (portrait phones, less than 576px) */
-@media (max-width: 575.98px) {
-  .user-setting_card {
-    width: 85%;
-    height: 450px;
-    position: relative;
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    justify-content: center;
-    margin-top: 22%;
-  }
-  .user-setting_text {
-    color: #efece0;
-    margin-bottom: 4%;
-    width: 70%;
-  }
-  .user-setting_edit-button,
-  .user-setting_cancel-button {
-    width: 3.7rem;
-    padding: 8px 10px 8px 10px;
-    margin: 2rem 1.3rem 1.3rem 0;
-    font-size: 0.7rem;
-  }
+
   .user-setting_icon {
     width: 100px;
     height: 100px;
-    position: absolute;
-    top: -50px; /* 円の半分を外に出す */
-    left: calc(50% - 50px); /* 左辺を親要素の左辺から中央（50%）に配置、さらに62px左にオフセット */
-    overflow: hidden;
+    top: -50px;
+  }
+}
+
+/* 極小デバイス対応 */
+@media (max-width: 360px) {
+  .user-setting_title {
+    font-size: 0.9rem;
+  }
+  .btn {
+    padding: 8px 16px;
+    font-size: 0.8rem;
   }
 }
 </style>

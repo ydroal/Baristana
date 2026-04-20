@@ -37,3 +37,7 @@ coverage
 
 /client/cert.pem
 /client/key.pem
+
+# Claude Code
+CLAUDE.md
+tasks/
