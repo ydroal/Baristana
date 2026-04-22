@@ -4,8 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest",
-    "start": "op run --no-masking --environment=ouijntf5nocuiedgffnud474ji -- node app.js"
+    "dev": "op run --no-masking --environment=ouijntf5nocuiedgffnud474ji -- node app.js",
+    "start": "node app.js",
+    "test": "jest"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "keywords": [],
   "author": "",

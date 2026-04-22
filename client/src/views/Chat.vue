@@ -20,7 +20,7 @@ const isAudioSourcesLoaded = ref(false);
 
 const currentUserId = computed(() => (userStore.getUser ? userStore.getUser.id : null));
 
-const socket = io('http://localhost:3000', {
+const socket = io(import.meta.env.VITE_APP_SOCKET_ENDPOINT || 'http://localhost:3000', {
   auth: { token: localStorage.getItem('jwt') }
 });
 

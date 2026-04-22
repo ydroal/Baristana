@@ -24,7 +24,7 @@ const server = http.createServer(app); // HTTP serverを作成
 // Socket.IO serverをHTTP serverに接続。
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
     methods: ["GET", "POST", "PUT"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,

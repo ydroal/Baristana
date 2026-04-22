@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "op run --environment=xbi4pr5ekauo6vnnwxz5hieqju -- vite",
-    "build": "op run --environment=xbi4pr5ekauo6vnnwxz5hieqju -- vite build --mode production",
+    "build": "vite build --mode production",
+    "build:local": "op run --environment=xbi4pr5ekauo6vnnwxz5hieqju -- vite build --mode production",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
     "format": "prettier --write src/",
