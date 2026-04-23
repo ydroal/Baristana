@@ -78,30 +78,17 @@ io.on("connection", (socket) => {
     socket.data.lastMessageAt = now;
     const userId = socket.data.userId;
     if (userId) {
-      // ここでデータベースにメッセージを保存
-      const query =
-        "INSERT INTO chat_message (message, user_id, created_at) VALUES (?, ?, NOW())";
-      connection.query(query, [msg, userId], function (err, results, fields) {
+      const userQuery =
+        "SELECT username, profile_picture_url FROM user WHERE id = ?";
+      connection.query(userQuery, [userId], function (err, results) {
         if (err) throw err;
-        // ユーザー情報を取得
-        const userQuery =
-          "SELECT username, profile_picture_url FROM user WHERE id = ?";
-        connection.query(userQuery, [userId], function (err, results, fields) {
-          if (err) throw err;
-          const username = results[0].username;
-          const usericon = results[0].profile_picture_url;
-
-          // メッセージ、ユーザー名、ユーザーアイコンを含むオブジェクトを作成
-          const messageObj = {
-            msg: msg,
-            username: username,
-            usericon: usericon,
-            userId: userId,
-          };
-
-          // メッセージをすべての接続しているクライアントにブロードキャスト
-          io.emit("chat message", messageObj);
-        });
+        const messageObj = {
+          msg: msg,
+          username: results[0].username,
+          usericon: results[0].profile_picture_url,
+          userId: userId,
+        };
+        io.emit("chat message", messageObj);
       });
     } else {
       console.error("Unknown user");

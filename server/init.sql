@@ -23,15 +23,6 @@ CREATE TABLE IF NOT EXISTS active_user (
   UNIQUE KEY user_id (user_id)
 );
 
-CREATE TABLE IF NOT EXISTS chat_message (
-  id int NOT NULL AUTO_INCREMENT,
-  user_id int NOT NULL,
-  message text NOT NULL,
-  created_at datetime NOT NULL,
-  PRIMARY KEY (id),
-  KEY user_id (user_id)
-);
-
 CREATE TABLE IF NOT EXISTS bgm (
   id int NOT NULL AUTO_INCREMENT,
   file_url varchar(255) NOT NULL,
