@@ -32,11 +32,7 @@ coverage
 .env.production
 .env
 
-../client/cert.pem
-../client/key.pem
-
-/client/cert.pem
-/client/key.pem
+*.pem
 
 # Claude Code
 CLAUDE.md
